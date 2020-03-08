@@ -16,8 +16,8 @@ This is a repository for Telegram bot that will be developed by Team №7 during
 ## Supported commands
 
 - `\start`
-    `Привет, %user_name%!`
+    Привет, %user_name%!
 - `\help`
-    `Введи команду /start для начала.`
+    Введи команду /start для начала.
 - `\history`
-    `Output of the last five commands`
+    Output of the last five commands
