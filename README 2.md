@@ -1,1 +1,0 @@
-# lucky-7-team-bot
