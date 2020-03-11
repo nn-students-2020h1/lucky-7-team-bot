@@ -1,46 +1,25 @@
-<<<<<<< Updated upstream
-# lucky-7-team-bot
-=======
-# Course contents
+# Lucky 7 Team Bot
 
-## Dijksta
+This is a repository for Telegram bot that will be developed by Team №7 during Intel Academic Program Python Course.
 
-## Disjoint sets
+## Set up Python environment
 
-**Disjoint sets**: 
+1. Create virtual environment `python -m venv venv`
+2. Activate virtual environment and install requirements: 
 
-    - Disjoint Arrays
-    - Disjoint Tree
-    - Disjoint Tree Ranked 
-    - Disjoint Tree Ranked and Path compression
+    `venv\Scripts\activate` - on Linux  
+    `venv\Scripts\activate.bat` - on Windows  
+    `pip install -r requirements.txt`  
 
-**Functions**:
+3. Execute ``python chat_bot_template.py``
 
-    - Create function
-    - Union function
-    - Find element function
+## Supported commands
 
-## Dynamic programming
-    - Coins
-    - Greed stone
-    - Max submatrix
-    
-## Searching algorithms
-    - Binary search
-    - Doubling search
-    - Linear search
-    
-## Skip lists
-    - Skil lists
-    - Linked lists
-    - Doubly linked lists
-
-## Sorting algorithms
-    - Bucket sort
-    - Insertion sort
-    - Selection sort
-    - Merge sort
-
-
-
->>>>>>> Stashed changes
+- `\start`  
+Привет, %user_name%!
+- `\help`  
+Введи команду /start для начала.
+- `\history`  
+Output of the last five commands
+- `\fact`  
+Prints the most upvoted fact about cats on https://cat-fact.herokuapp.com
