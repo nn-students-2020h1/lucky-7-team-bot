@@ -1,0 +1,7 @@
+__pycache__
+*.pyc
+tmp
+.idea
+.vscode
+venv
+logs.json
