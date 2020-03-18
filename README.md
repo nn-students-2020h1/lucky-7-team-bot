@@ -21,3 +21,5 @@ This is a repository for Telegram bot that will be developed by Team №7 during
 Введи команду /start для начала.
 - `\history`  
 Output of the last five commands
+- `\fact`  
+Prints the most upvoted fact about cats on https://cat-fact.herokuapp.com
