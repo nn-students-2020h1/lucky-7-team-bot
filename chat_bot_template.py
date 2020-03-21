@@ -114,9 +114,7 @@ def fact(update: Update, context: CallbackContext):
 @add_log
 def coronastats(update: Update, context: CallbackContext):
     s = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%m-%d-%Y")
-    print(s)
     r = requests.get(f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{s}.csv')
-
     if r.status_code != 200:
         update.message.reply_text("Что-то пошло не так")
     else:
@@ -125,7 +123,6 @@ def coronastats(update: Update, context: CallbackContext):
         with open("todaystats.csv", "r") as f:
             stats = csv.DictReader(f)
             top_five = []
-            print(stats)
             for row in stats:
                 if row["Province/State"] == "":
                     row["Province/State"] = row["Country/Region"] #если провинция пустая строка то приравниваем ее к стране
@@ -139,7 +136,7 @@ def coronastats(update: Update, context: CallbackContext):
                             break
             text = "Топ зараженных провинций:\n"
             for i in range(5):
-                text += f'{i + 1}.{top_five[i][0]} - {top_five[i][1]} зараженных\n'
+                text += f'{i + 1}.{top_five[i][0]}\n' ##- {top_five[i][1]} зараженных\n
             update.message.reply_text(text)
 
 
