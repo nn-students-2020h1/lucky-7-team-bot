@@ -3,8 +3,10 @@
 
 import logging
 import json
+import csv
 from timeit import default_timer as timer
 import requests
+import datetime
 from setup import PROXY, TOKEN
 from telegram import Bot, Update
 from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater
@@ -109,6 +111,38 @@ def fact(update: Update, context: CallbackContext):
             upvoted_text = i['text']
     update.message.reply_text(upvoted_text)
 
+@add_log
+def coronastats(update: Update, context: CallbackContext):
+    s = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%m-%d-%Y")
+    print(s)
+    r = requests.get(f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{s}.csv')
+
+    if r.status_code != 200:
+        update.message.reply_text("Что-то пошло не так")
+    else:
+        with open("todaystats.csv", "w") as f:
+            f.write(r.text)
+        with open("todaystats.csv", "r") as f:
+            stats = csv.DictReader(f)
+            top_five = []
+            print(stats)
+            for row in stats:
+                if row["Province/State"] == "":
+                    row["Province/State"] = row["Country/Region"] #если провинция пустая строка то приравниваем ее к стране
+                new_infected = int(row["Confirmed"]) - int(row["Deaths"]) - int(row["Recovered"])
+                if len(top_five) == 0:
+                    top_five.append((row["Province/State"], new_infected))
+                else:
+                    for i in range(len(top_five)):
+                        if top_five[i][1] <= new_infected:
+                            top_five.insert(i, (row["Province/State"], new_infected))
+                            break
+            text = "Топ зараженных провинций:\n"
+            for i in range(5):
+                text += f'{i + 1}.{top_five[i][0]} - {top_five[i][1]} зараженных\n'
+            update.message.reply_text(text)
+
+
 
 def main():
     bot = Bot(
@@ -123,7 +157,7 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('history', history))
     updater.dispatcher.add_handler(CommandHandler('test', test))
     updater.dispatcher.add_handler(CommandHandler('fact', fact))
-
+    updater.dispatcher.add_handler(CommandHandler('coronastats', coronastats))
     # on noncommand i.e message - echo the message on Telegram
     updater.dispatcher.add_handler(MessageHandler(Filters.text, echo))
 
