@@ -5,12 +5,18 @@ import logging
 import json
 import csv
 from timeit import default_timer as timer
+import time
 import requests
 import datetime
 from setup import PROXY, TOKEN
-from telegram import Bot, Update
-from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater
+from telegram import Bot, Update,InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater, CallbackQueryHandler
 
+date = datetime.date.today().strftime("%m-%d-%Y")
+bot = Bot(
+        token=TOKEN,
+        base_url=PROXY,  # delete it if connection via VPN
+    )
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -37,11 +43,12 @@ def average_time(function):
 
 def add_log(function):
     def wrapper(*args, **kwargs):
+        message = 'button' if args[0].message is None else args[0].message.text
         new_log = {
             "user": args[0].effective_user.first_name,
             "function": function.__name__,
-            "message": args[0].message.text,
-            "time": args[0].message.date.strftime("%d-%b-%Y (%H:%M:%S.%f)")
+            "message": message,
+            "time": args[0].effective_message.date.strftime("%d-%b-%Y (%H:%M:%S.%f)")
         }
         with open("logs.json", "a") as write_file:
             write_file.write(json.dumps(new_log)+"\n")
@@ -113,10 +120,16 @@ def fact(update: Update, context: CallbackContext):
 
 @add_log
 def coronastats(update: Update, context: CallbackContext):
-    s = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%m-%d-%Y")
-    r = requests.get(f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{s}.csv')
+    global date
+    r = requests.get(f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{date}.csv')
     if r.status_code != 200:
-        update.message.reply_text("Что-то пошло не так")
+        keyboard = [[InlineKeyboardButton("Да, покажи данные за предыдущий день", callback_data="True"),
+                     InlineKeyboardButton("Нет, спасибо", callback_data="False")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        if date == datetime.date.today().strftime("%m-%d-%Y"):
+            bot.send_message(chat_id=update.effective_chat['id'], text=f"Что-то пошло не так. Возможно, данные за {date} еще не появились. Хотите посмотреть данные за предыдущий день?", reply_markup=reply_markup)
+        else:
+            bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id, text=f"Что-то пошло не так. Возможно, данные за {date} еще не появились. Хотите посмотреть данные за предыдущий день?", reply_markup=reply_markup)
     else:
         with open("todaystats.csv", "w") as f:
             f.write(r.text)
@@ -124,28 +137,34 @@ def coronastats(update: Update, context: CallbackContext):
             stats = csv.DictReader(f)
             top_five = []
             for row in stats:
-                if row["Province/State"] == "":
-                    row["Province/State"] = row["Country/Region"] #если провинция пустая строка то приравниваем ее к стране
+                place = row["Province_State"] + " " + row["Country_Region"]
                 new_infected = int(row["Confirmed"]) - int(row["Deaths"]) - int(row["Recovered"])
                 if len(top_five) == 0:
-                    top_five.append((row["Province/State"], new_infected))
+                    top_five.append((place, new_infected))
                 else:
                     for i in range(len(top_five)):
                         if top_five[i][1] <= new_infected:
-                            top_five.insert(i, (row["Province/State"], new_infected))
+                            top_five.insert(i, (place, new_infected))
                             break
             text = "Топ зараженных провинций:\n"
             for i in range(5):
-                text += f'{i + 1}.{top_five[i][0]}\n' ##- {top_five[i][1]} зараженных\n
-            update.message.reply_text(text)
+                text += f'{i + 1}. {top_five[i][0]} - {top_five[i][1]} заражённых\n'
+            bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id,  text=f"Статистика заражённых COVID-19 за {date}\n{text}")
+            date = datetime.date.today().strftime("%m-%d-%Y")
 
 
+def button(update, context):
+    query = update.callback_query
+    if query['data'] == 'False':
+        global bot
+        bot.send_message(chat_id=update.callback_query.message.chat['id'], text='Хорошо :)')
+    else:
+        global date
+        date = (datetime.datetime.strptime(date, "%m-%d-%Y") - datetime.timedelta(days=1)).strftime("%m-%d-%Y")
+        coronastats(update, context)
 
 def main():
-    bot = Bot(
-        token=TOKEN,
-        base_url=PROXY,  # delete it if connection via VPN
-    )
+
     updater = Updater(bot=bot, use_context=True)
 
     # on different commands - answer in Telegram
@@ -155,6 +174,7 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('test', test))
     updater.dispatcher.add_handler(CommandHandler('fact', fact))
     updater.dispatcher.add_handler(CommandHandler('coronastats', coronastats))
+    updater.dispatcher.add_handler(CallbackQueryHandler(button))
     # on noncommand i.e message - echo the message on Telegram
     updater.dispatcher.add_handler(MessageHandler(Filters.text, echo))
 
