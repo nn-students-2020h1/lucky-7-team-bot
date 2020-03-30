@@ -60,13 +60,28 @@ def add_log(function):
 @add_log
 def start(update: Update, context: CallbackContext):
     """Send a message when the command /start is issued."""
-    update.message.reply_text(f'Привет, {update.effective_user.first_name}!')
+    text = f"""
+Hello, {update.effective_user.first_name}!
+Nice to see you here!
+If you need help, enter /help command.
+"""
+    update.message.reply_text(text=text)
 
 
 @add_log
 def chat_help(update: Update, context: CallbackContext):
     """Send a message when the command /help is issued."""
-    update.message.reply_text('Введи команду /start для начала. ')
+    text = """ 
+    Supported commands:
+/start - start bot 
+/help - show supported commands
+/history - show last five logs
+/fact - get the most popular fact about cats 
+/movie - get random movie from top-250 IMDb
+/corona_stats - get top-5 infected countries 
+/pokemon - get info and image of random pokemon
+"""
+    update.message.reply_text(text)
 
 
 @add_log
@@ -143,7 +158,22 @@ Link: https://www.imdb.com/title/{id}/
 
 
 @add_log
-def coronastats(update: Update, context: CallbackContext):
+def pokemon(update: Update, context: CallbackContext):
+    num = random.randint(1, 807)
+    pokemon_info = requests.get(f'https://pokeapi.co/api/v2/pokemon/{num}/')
+    pokemon_info = json.loads(pokemon_info.text)
+    text = f"""
+Name: {pokemon_info['name'].capitalize()}
+Height: {pokemon_info['height']}
+Weight: {pokemon_info['weight']}
+Type: {pokemon_info['types'][0]['type']['name']}
+"""
+    bot.send_message(chat_id=update.effective_chat['id'], text=text)
+    bot.send_photo(chat_id=update.effective_chat['id'], photo=pokemon_info['sprites']['front_default'])
+
+
+@add_log
+def corona_stats(update: Update, context: CallbackContext):
     global date
     r = requests.get(f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{date}.csv')
     if r.status_code != 200:
@@ -185,10 +215,10 @@ def button(update, context):
     else:
         global date
         date = (datetime.datetime.strptime(date, "%m-%d-%Y") - datetime.timedelta(days=1)).strftime("%m-%d-%Y")
-        coronastats(update, context)
+        corona_stats(update, context)
+
 
 def main():
-
     updater = Updater(bot=bot, use_context=True)
 
     # on different commands - answer in Telegram
@@ -197,9 +227,12 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('history', history))
     updater.dispatcher.add_handler(CommandHandler('test', test))
     updater.dispatcher.add_handler(CommandHandler('fact', fact))
-    updater.dispatcher.add_handler(CommandHandler('coronastats', coronastats))
+    updater.dispatcher.add_handler(CommandHandler('corona_stats', corona_stats))
     updater.dispatcher.add_handler(CommandHandler('movie', movie))
+    updater.dispatcher.add_handler( CommandHandler('pokemon', pokemon))
+
     updater.dispatcher.add_handler(CallbackQueryHandler(button))
+
     # on noncommand i.e message - echo the message on Telegram
     updater.dispatcher.add_handler(MessageHandler(Filters.text, echo))
 
