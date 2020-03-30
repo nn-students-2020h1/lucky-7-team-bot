@@ -4,10 +4,11 @@
 import logging
 import json
 import csv
+import random
 from timeit import default_timer as timer
-import time
 import requests
 import datetime
+from imdb import IMDb
 from setup import PROXY, TOKEN
 from telegram import Bot, Update,InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater, CallbackQueryHandler
@@ -118,6 +119,29 @@ def fact(update: Update, context: CallbackContext):
             upvoted_text = i['text']
     update.message.reply_text(upvoted_text)
 
+
+@add_log
+def movie(update: Update, context: CallbackContext):
+    ia = IMDb()
+    top = ia.get_top250_movies()
+    random_movie = top[random.randint(0,249)]
+    id = 'tt' + random_movie.movieID
+    info = requests.get(f'http://www.omdbapi.com/?apikey=5a5643&i={id}')
+    info = json.loads(info.text)
+    # poster = requests.get(f'http://img.omdbapi.com/?apikey=5a5643&i={id}')
+    text =  f"""
+    Title: {random_movie.data['title']}
+Genre: {info["Genre"]}
+Year: {random_movie.data['year']}
+Director: {info["Director"]}
+Runtime: {info["Runtime"]}
+IMDb rating: {random_movie.data['rating']}
+Top 250 rank: {random_movie.data['top 250 rank']}
+Link: https://www.imdb.com/title/{id}/
+    """
+    update.message.reply_text(text=text, disable_web_page_preview=False)
+
+
 @add_log
 def coronastats(update: Update, context: CallbackContext):
     global date
@@ -174,6 +198,7 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('test', test))
     updater.dispatcher.add_handler(CommandHandler('fact', fact))
     updater.dispatcher.add_handler(CommandHandler('coronastats', coronastats))
+    updater.dispatcher.add_handler(CommandHandler('movie', movie))
     updater.dispatcher.add_handler(CallbackQueryHandler(button))
     # on noncommand i.e message - echo the message on Telegram
     updater.dispatcher.add_handler(MessageHandler(Filters.text, echo))
