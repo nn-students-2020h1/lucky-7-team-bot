@@ -18,6 +18,7 @@ bot = Bot(
         token=TOKEN,
         base_url=PROXY,  # delete it if connection via VPN
     )
+joke_id = ""
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -80,6 +81,7 @@ def chat_help(update: Update, context: CallbackContext):
 /movie - get random movie from top-250 IMDb
 /corona_stats - get top-5 infected countries 
 /pokemon - get info and image of random pokemon
+/joke - bot will make you laugh (probably)
 """
     update.message.reply_text(text)
 
@@ -207,15 +209,62 @@ def corona_stats(update: Update, context: CallbackContext):
             date = datetime.date.today().strftime("%m-%d-%Y")
 
 
-def button(update, context):
+@add_log
+def joke(update: Update, context: CallbackContext):
+    url = "https://joke3.p.rapidapi.com/v1/joke"
+    headers = {
+        'x-rapidapi-host': "joke3.p.rapidapi.com",
+        'x-rapidapi-key': "837031bcd7msh57190d81a3d0374p19228ejsn5404ac1dd13a"
+    }
+    global joke_id
+    response = json.loads(requests.request("GET", url, headers=headers).text)
+    joke_id = response["id"]
+    content = response["content"]
+    likes = response["upvotes"]
+    dislikes = response["downvotes"]
+    keyboard = [[InlineKeyboardButton(f"Like ❤️ {likes}", callback_data="Like"),
+                 InlineKeyboardButton(f"Dislike 💔 {dislikes}", callback_data="Dislike"),
+                 InlineKeyboardButton("More jokes", callback_data="More jokes")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    bot.send_message(chat_id=update.effective_chat['id'], text=content, reply_markup=reply_markup)
+
+
+def button_corona(update, context):
     query = update.callback_query
     if query['data'] == 'False':
         global bot
         bot.send_message(chat_id=update.callback_query.message.chat['id'], text='Хорошо :)')
-    else:
+    elif query['data'] == 'True':
         global date
         date = (datetime.datetime.strptime(date, "%m-%d-%Y") - datetime.timedelta(days=1)).strftime("%m-%d-%Y")
         corona_stats(update, context)
+
+
+def button_joke(update, context):
+    query = update.callback_query
+    global joke_id
+    if query['data'] == 'Like' or query['data'] == "Dislike":
+        url = f"https://joke3.p.rapidapi.com/v1/joke/{joke_id}/upvote" if query['data'] == 'Like' else f"https://joke3.p.rapidapi.com/v1/joke/{joke_id}/downvote"
+        payload = ""
+        headers = {
+            'x-rapidapi-host': "joke3.p.rapidapi.com",
+            'x-rapidapi-key': "837031bcd7msh57190d81a3d0374p19228ejsn5404ac1dd13a",
+            'content-type': "application/x-www-form-urlencoded"
+        }
+        response = requests.request("POST", url, data=payload, headers=headers)
+        response = json.loads(response.text)
+        content = response["content"]
+        likes = response["upvotes"]
+        dislikes = response["downvotes"]
+        keyboard = [[InlineKeyboardButton( f"Like ❤️ {likes}", callback_data="Like" ),
+                     InlineKeyboardButton( f"Dislike 💔 {dislikes}", callback_data="Dislike" ),
+                     InlineKeyboardButton( "More jokes", callback_data="More jokes" )]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        text = "You ❤️ it!" if query['data'] == 'Like' else "You 💔️ it!"
+        bot.answerCallbackQuery(callback_query_id=update.callback_query.id, text="You ❤️ it!")
+        bot.edit_message_text(message_id=update.callback_query.message.message_id, chat_id=update.callback_query.message.chat.id, text=content, reply_markup=reply_markup)
+    elif query['data'] == 'More jokes':
+        joke(update, context)
 
 
 def main():
@@ -229,9 +278,11 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('fact', fact))
     updater.dispatcher.add_handler(CommandHandler('corona_stats', corona_stats))
     updater.dispatcher.add_handler(CommandHandler('movie', movie))
-    updater.dispatcher.add_handler( CommandHandler('pokemon', pokemon))
+    updater.dispatcher.add_handler(CommandHandler('pokemon', pokemon))
+    updater.dispatcher.add_handler(CommandHandler('joke', joke))
 
-    updater.dispatcher.add_handler(CallbackQueryHandler(button))
+    updater.dispatcher.add_handler(CallbackQueryHandler(button_corona, pattern='(True|False)'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(button_joke, pattern='(Like|Dislike|More jokes)'))
 
     # on noncommand i.e message - echo the message on Telegram
     updater.dispatcher.add_handler(MessageHandler(Filters.text, echo))
