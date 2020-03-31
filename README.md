@@ -28,4 +28,4 @@ Team:
 - `/movie` - get random movie from top-250 IMDb  
 - `/corona_stats` - get top-5 infected countries 
 - `/pokemon` - get info and image of random pokemon
-- 
+- `/joke` - bot will make you laugh (probably)
