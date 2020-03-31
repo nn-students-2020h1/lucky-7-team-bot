@@ -17,7 +17,7 @@ Team:
     `venv\Scripts\activate.bat` - on Windows  
     `pip install -r requirements.txt`  
 
-3. Execute ``python chat_bot_template.py``
+3. Execute ``python run.py``
 
 ## Supported commands
 
