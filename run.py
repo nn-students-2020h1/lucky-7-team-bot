@@ -3,30 +3,32 @@
 
 import logging
 import json
-import csv
 import random
 from timeit import default_timer as timer
 import requests
 import datetime
 from imdb import IMDb
 from setup import PROXY, TOKEN
-from telegram import Bot, Update,InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from telegram import Bot, Update, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater, CallbackQueryHandler
+from classes import Logs, CSVStats
+
 
 date = datetime.date.today().strftime("%m-%d-%Y")
 bot = Bot(
-        token=TOKEN,
-        base_url=PROXY,  # delete it if connection via VPN
-    )
+    token=TOKEN,
+    base_url=PROXY,  # delete it if connection via VPN
+)
 # Enable logging
+joke_id = ""
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
+                     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
+
 # Define a few command handlers. These usually take the two arguments update and
 # context. Error handlers also receive the raised TelegramError object in error.
-
 
 def average_time(function):
     def inner(update: Update, context: CallbackContext):
@@ -35,37 +37,13 @@ def average_time(function):
         t = (timer() - t)
         update.message.reply_text(f'Время: {t} s!')
         return res
+
     return inner
+
 
 # TODO: количество логов в истории
 # TODO: вывод логов только одного юзера, а не всех
 # TODO: вывод всех логов по ключу
-
-class Logs:
-    def __init__(self, file_name):
-        self.file_name = file_name
-        f = open(file_name, "r")
-        f.close()
-
-    def addLog(self, new_log):
-        with open(self.file_name, "a") as write_file:
-            write_file.write(json.dumps(new_log) + "\n")
-
-    def addLogs(self, newlogs):
-        with open(self.file_name, "a") as write_file:
-            for new_log in newlogs:
-                write_file.write(json.dumps(new_log) + "\n")
-
-    def getLastFiveLogs(self):
-        ans = []
-        with open(self.file_name, "r") as read_file:
-            data = read_file.readlines()
-            if len(data) > 5:
-                data = data[-1:-6:-1]
-            for elems in data:
-                log = json.loads(elems)
-                ans.append(log)
-            return ans
 
 
 def add_log(function):
@@ -80,6 +58,7 @@ def add_log(function):
         logs = Logs("logs.json")
         logs.addLog(new_log)
         return function(*args, **kwargs)
+
     return wrapper
 
 
@@ -106,6 +85,7 @@ def chat_help(update: Update, context: CallbackContext):
 /movie - get random movie from top-250 IMDb
 /corona_stats - get top-5 infected countries 
 /pokemon - get info and image of random pokemon
+/joke - bot will make you laugh (probably)
 """
     update.message.reply_text(text)
 
@@ -138,7 +118,7 @@ def test(update: Update, context: CallbackContext):
         "user": update.effective_user.first_name,
         "function": "anonym",
         "message": "test",
-        "time": update.message.date.strftime("%d-%b-%Y (%H:%M:%S.%f)" )
+        "time": update.message.date.strftime("%d-%b-%Y (%H:%M:%S.%f)")
     }
     logs = Logs("logs.json")
     loglist = []
@@ -164,12 +144,12 @@ def fact(update: Update, context: CallbackContext):
 def movie(update: Update, context: CallbackContext):
     ia = IMDb()
     top = ia.get_top250_movies()
-    random_movie = top[random.randint(0,249)]
+    random_movie = top[random.randint(0, 249)]
     id = 'tt' + random_movie.movieID
     info = requests.get(f'http://www.omdbapi.com/?apikey=5a5643&i={id}')
     info = json.loads(info.text)
     # poster = requests.get(f'http://img.omdbapi.com/?apikey=5a5643&i={id}')
-    text =  f"""
+    text = f"""
     Title: {random_movie.data['title']}
 Genre: {info["Genre"]}
 Year: {random_movie.data['year']}
@@ -195,34 +175,6 @@ Type: {pokemon_info['types'][0]['type']['name']}
 """
     bot.send_message(chat_id=update.effective_chat['id'], text=text)
     bot.send_photo(chat_id=update.effective_chat['id'], photo=pokemon_info['sprites']['front_default'])
-##
-
-class CSVStats:
-    date = datetime.date.today().strftime("%m-%d-%Y")
-
-    def __init__(self, file_name):
-        self.filename = file_name
-        r = requests.get(f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{self.date}.csv')
-        self.status_code = r.status_code
-        if self.status_code == 200:
-            with open(file_name,"wb") as f:
-                f.write(r.content)
-
-    def getTopFiveProvinces(self):
-        top_five = []
-        with open(self.filename, "r") as f:
-            stats = csv.DictReader(f)
-            for row in stats:
-                place = row["Province_State"] + " " + row["Country_Region"]
-                new_infected = int(row["Confirmed"]) - int(row["Deaths"]) - int(row["Recovered"])
-                if len(top_five) == 0:
-                    top_five.append({"province" : place, "new infected" : new_infected})
-                else:
-                    for i in range(len(top_five)):
-                        if top_five[i]["new infected"] <= new_infected:
-                            top_five.insert(i, {"province" : place, "new infected" : new_infected})
-                            break
-        return top_five
 
 
 @add_log
@@ -233,27 +185,81 @@ def corona_stats(update: Update, context: CallbackContext):
                      InlineKeyboardButton("Нет, спасибо", callback_data="False")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         if CSVStats.date == datetime.date.today().strftime("%m-%d-%Y"):
-            bot.send_message(chat_id=update.effective_chat['id'], text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. Хотите посмотреть данные за предыдущий день?", reply_markup=reply_markup)
+            bot.send_message(chat_id=update.effective_chat['id'],
+                              text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. Хотите посмотреть данные за предыдущий день?",
+                              reply_markup=reply_markup)
         else:
-            bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id, text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. Хотите посмотреть данные за предыдущий день?", reply_markup=reply_markup)
+            bot.edit_message_text(chat_id=update.effective_message.chat_id,
+                                   message_id=update.effective_message.message_id,
+                                   text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. Хотите посмотреть данные за предыдущий день?",
+                                   reply_markup=reply_markup)
     else:
         top_five = csvStat.getTopFiveProvinces()
         text = "Топ зараженных провинций:\n"
         for i in range(5):
             text += f'{i + 1}. {top_five[i]["province"]} - {top_five[i]["new infected"]} заражённых\n'
-        bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id,  text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
+        bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id,
+                               text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
         CSVStats.date = datetime.date.today().strftime("%m-%d-%Y")
 
 
-def button(update, context):
+@add_log
+def joke(update: Update, context: CallbackContext):
+    url = "https://joke3.p.rapidapi.com/v1/joke"
+    headers = {
+        'x-rapidapi-host': "joke3.p.rapidapi.com",
+        'x-rapidapi-key': "837031bcd7msh57190d81a3d0374p19228ejsn5404ac1dd13a"
+    }
+    global joke_id
+    response = json.loads(requests.request("GET", url, headers=headers).text)
+    joke_id = response["id"]
+    content = response["content"]
+    likes = response["upvotes"]
+    dislikes = response["downvotes"]
+    keyboard = [[InlineKeyboardButton(f"Like ❤️ {likes}", callback_data="Like"),
+                 InlineKeyboardButton(f"Dislike 💔 {dislikes}", callback_data="Dislike"),
+                 InlineKeyboardButton("More jokes", callback_data="More jokes")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    bot.send_message(chat_id=update.effective_chat['id'], text=content, reply_markup=reply_markup)
+
+
+def button_corona(update, context):
     query = update.callback_query
     if query['data'] == 'False':
         global bot
         bot.send_message(chat_id=update.callback_query.message.chat['id'], text='Хорошо :)')
     else:
         global date
-        CSVStats.date = (datetime.datetime.strptime(date, "%m-%d-%Y") - datetime.timedelta(days=1)).strftime("%m-%d-%Y")
+        CSVStats.date = (datetime.datetime.strptime(date, "%m-%d-%Y") - datetime.timedelta(days=1)).strftime(
+            "%m-%d-%Y")
         corona_stats(update, context)
+
+
+def button_joke(update, context):
+    query = update.callback_query
+    if query['data'] == 'Like' or query['data'] == "Dislike":
+        global joke_id
+        url = f"https://joke3.p.rapidapi.com/v1/joke/{joke_id}/upvote" if query['data'] == 'Like' else f"https://joke3.p.rapidapi.com/v1/joke/{joke_id}/downvote"
+        payload = ""
+        headers = {
+            'x-rapidapi-host': "joke3.p.rapidapi.com",
+            'x-rapidapi-key': "837031bcd7msh57190d81a3d0374p19228ejsn5404ac1dd13a",
+            'content-type': "application/x-www-form-urlencoded"
+        }
+        response = requests.request("POST", url, data=payload, headers=headers)
+        response = json.loads(response.text)
+        content = response["content"]
+        likes = response["upvotes"]
+        dislikes = response["downvotes"]
+        keyboard = [[InlineKeyboardButton(f"Like ❤️ {likes}", callback_data="Like"),
+                     InlineKeyboardButton(f"Dislike 💔 {dislikes}", callback_data="Dislike"),
+                     InlineKeyboardButton("More jokes", callback_data="More jokes")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        text = "You ❤️ it!" if query['data'] == 'Like' else "You 💔️ it!"
+        bot.answerCallbackQuery(callback_query_id=update.callback_query.id, text=text)
+        bot.edit_message_text(message_id=update.callback_query.message.message_id, chat_id=update.callback_query.message.chat.id, text=content, reply_markup=reply_markup)
+    elif query['data'] == 'More jokes':
+        joke(update, context)
 
 
 def main():
@@ -267,9 +273,11 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('fact', fact))
     updater.dispatcher.add_handler(CommandHandler('corona_stats', corona_stats))
     updater.dispatcher.add_handler(CommandHandler('movie', movie))
-    updater.dispatcher.add_handler( CommandHandler('pokemon', pokemon))
+    updater.dispatcher.add_handler(CommandHandler('joke', joke))
+    updater.dispatcher.add_handler(CommandHandler('pokemon', pokemon))
 
-    updater.dispatcher.add_handler(CallbackQueryHandler(button))
+    updater.dispatcher.add_handler(CallbackQueryHandler(button_corona, pattern='(True|False)'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(button_joke, pattern='(Like|Dislike|More jokes)'))
 
     # on noncommand i.e message - echo the message on Telegram
     updater.dispatcher.add_handler(MessageHandler(Filters.text, echo))
