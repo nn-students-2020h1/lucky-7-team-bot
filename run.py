@@ -41,6 +41,32 @@ def average_time(function):
 # TODO: вывод логов только одного юзера, а не всех
 # TODO: вывод всех логов по ключу
 
+class Logs:
+    def __init__(self, file_name):
+        self.file_name = file_name
+        f = open(file_name, "r")
+        f.close()
+
+    def addLog(self, new_log):
+        with open(self.file_name, "a") as write_file:
+            write_file.write(json.dumps(new_log) + "\n")
+
+    def addLogs(self, newlogs):
+        with open(self.file_name, "a") as write_file:
+            for new_log in newlogs:
+                write_file.write(json.dumps(new_log) + "\n")
+
+    def getLastFiveLogs(self):
+        ans = []
+        with open(self.file_name, "r") as read_file:
+            data = read_file.readlines()
+            if len(data) > 5:
+                data = data[-1:-6:-1]
+            for elems in data:
+                log = json.loads(elems)
+                ans.append(log)
+            return ans
+
 
 def add_log(function):
     def wrapper(*args, **kwargs):
@@ -51,8 +77,8 @@ def add_log(function):
             "message": message,
             "time": args[0].effective_message.date.strftime("%d-%b-%Y (%H:%M:%S.%f)")
         }
-        with open("logs.json", "a") as write_file:
-            write_file.write(json.dumps(new_log)+"\n")
+        logs = Logs("logs.json")
+        logs.addLog(new_log)
         return function(*args, **kwargs)
     return wrapper
 
@@ -98,16 +124,13 @@ def error(update: Update, context: CallbackContext):
 
 def history(update: Update, context: CallbackContext):
     """Send a message when the command /logs is issued."""
-    with open("logs.json", "r") as read_file:
-        data = read_file.readlines()
-        if len(data) > 5:
-            data = data[-1:-6:-1]
-        for elems in data:
-            log = json.loads(elems)
-            response = ""
-            for key, value in log.items():
-                response = response + f'{key}: {value}\n'
-            update.message.reply_text(response)
+    logs = Logs("logs.json")
+    logslist = logs.getLastFiveLogs()
+    for log in logslist:
+        response = ""
+        for key, value in log.items():
+            response = response + f'{key}: {value}\n'
+        update.message.reply_text(response)
 
 
 def test(update: Update, context: CallbackContext):
@@ -117,9 +140,11 @@ def test(update: Update, context: CallbackContext):
         "message": "test",
         "time": update.message.date.strftime("%d-%b-%Y (%H:%M:%S.%f)" )
     }
-    with open("logs.json", "a") as write_file:
-        for _ in range(100000):
-            write_file.write(json.dumps(new_log) + "\n")
+    logs = Logs("logs.json")
+    loglist = []
+    for _ in range(100000):
+        loglist.append(new_log)
+    logs.addLogs(loglist)
 
 
 @add_log
@@ -170,41 +195,54 @@ Type: {pokemon_info['types'][0]['type']['name']}
 """
     bot.send_message(chat_id=update.effective_chat['id'], text=text)
     bot.send_photo(chat_id=update.effective_chat['id'], photo=pokemon_info['sprites']['front_default'])
+##
 
+class CSVStats:
+    date = datetime.date.today().strftime("%m-%d-%Y")
 
-@add_log
-def corona_stats(update: Update, context: CallbackContext):
-    global date
-    r = requests.get(f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{date}.csv')
-    if r.status_code != 200:
-        keyboard = [[InlineKeyboardButton("Да, покажи данные за предыдущий день", callback_data="True"),
-                     InlineKeyboardButton("Нет, спасибо", callback_data="False")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        if date == datetime.date.today().strftime("%m-%d-%Y"):
-            bot.send_message(chat_id=update.effective_chat['id'], text=f"Что-то пошло не так. Возможно, данные за {date} еще не появились. Хотите посмотреть данные за предыдущий день?", reply_markup=reply_markup)
-        else:
-            bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id, text=f"Что-то пошло не так. Возможно, данные за {date} еще не появились. Хотите посмотреть данные за предыдущий день?", reply_markup=reply_markup)
-    else:
-        with open("todaystats.csv", "w") as f:
-            f.write(r.text)
-        with open("todaystats.csv", "r") as f:
+    def __init__(self, file_name):
+        self.filename = file_name
+        r = requests.get(f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{self.date}.csv')
+        self.status_code = r.status_code
+        if self.status_code == 200:
+            with open(file_name,"wb") as f:
+                f.write(r.content)
+
+    def getTopFiveProvinces(self):
+        top_five = []
+        with open(self.filename, "r") as f:
             stats = csv.DictReader(f)
-            top_five = []
             for row in stats:
                 place = row["Province_State"] + " " + row["Country_Region"]
                 new_infected = int(row["Confirmed"]) - int(row["Deaths"]) - int(row["Recovered"])
                 if len(top_five) == 0:
-                    top_five.append((place, new_infected))
+                    top_five.append({"province" : place, "new infected" : new_infected})
                 else:
                     for i in range(len(top_five)):
-                        if top_five[i][1] <= new_infected:
-                            top_five.insert(i, (place, new_infected))
+                        if top_five[i]["new infected"] <= new_infected:
+                            top_five.insert(i, {"province" : place, "new infected" : new_infected})
                             break
-            text = "Топ зараженных провинций:\n"
-            for i in range(5):
-                text += f'{i + 1}. {top_five[i][0]} - {top_five[i][1]} заражённых\n'
-            bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id,  text=f"Статистика заражённых COVID-19 за {date}\n{text}")
-            date = datetime.date.today().strftime("%m-%d-%Y")
+        return top_five
+
+
+@add_log
+def corona_stats(update: Update, context: CallbackContext):
+    csvStat = CSVStats("todaystats.csv")
+    if csvStat.status_code != 200:
+        keyboard = [[InlineKeyboardButton("Да, покажи данные за предыдущий день", callback_data="True"),
+                     InlineKeyboardButton("Нет, спасибо", callback_data="False")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        if CSVStats.date == datetime.date.today().strftime("%m-%d-%Y"):
+            bot.send_message(chat_id=update.effective_chat['id'], text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. Хотите посмотреть данные за предыдущий день?", reply_markup=reply_markup)
+        else:
+            bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id, text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. Хотите посмотреть данные за предыдущий день?", reply_markup=reply_markup)
+    else:
+        top_five = csvStat.getTopFiveProvinces()
+        text = "Топ зараженных провинций:\n"
+        for i in range(5):
+            text += f'{i + 1}. {top_five[i]["province"]} - {top_five[i]["new infected"]} заражённых\n'
+        bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id,  text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
+        CSVStats.date = datetime.date.today().strftime("%m-%d-%Y")
 
 
 def button(update, context):
@@ -214,7 +252,7 @@ def button(update, context):
         bot.send_message(chat_id=update.callback_query.message.chat['id'], text='Хорошо :)')
     else:
         global date
-        date = (datetime.datetime.strptime(date, "%m-%d-%Y") - datetime.timedelta(days=1)).strftime("%m-%d-%Y")
+        CSVStats.date = (datetime.datetime.strptime(date, "%m-%d-%Y") - datetime.timedelta(days=1)).strftime("%m-%d-%Y")
         corona_stats(update, context)
 
 
