@@ -149,19 +149,17 @@ def movie(update: Update, context: CallbackContext):
     info = requests.get(f'http://www.omdbapi.com/?apikey=5a5643&i={id}')
     info = json.loads(info.text)
     # poster = requests.get(f'http://img.omdbapi.com/?apikey=5a5643&i={id}')
-
-
-text = f"""
-   Title: {random_movie.data['title']}
-Genre: {info["Genre"]}
-Year: {random_movie.data['year']}
-Director: {info["Director"]}
-Runtime: {info["Runtime"]}
-IMDb rating: {random_movie.data['rating']}
-Top 250 rank: {random_movie.data['top 250 rank']}
-Link: https://www.imdb.com/title/{id}/
-    """
-update.message.reply_text(text=text, disable_web_page_preview=False)
+    text = f"""
+       Title: {random_movie.data['title']}
+    Genre: {info["Genre"]}
+    Year: {random_movie.data['year']}
+    Director: {info["Director"]}
+    Runtime: {info["Runtime"]}
+    IMDb rating: {random_movie.data['rating']}
+    Top 250 rank: {random_movie.data['top 250 rank']}
+    Link: https://www.imdb.com/title/{id}/
+        """
+    update.message.reply_text(text=text, disable_web_page_preview=False)
 
 
 @add_log
@@ -303,8 +301,7 @@ def button_joke(update, context):
     query = update.callback_query
     if query['data'] == 'Like' or query['data'] == "Dislike":
         global joke_id
-        url = f"https://joke3.p.rapidapi.com/v1/joke/{joke_id}/upvote" if query[
-                                                                              'data'] == 'Like' else f"https://joke3.p.rapidapi.com/v1/joke/{joke_id}/downvote"
+        url = f"https://joke3.p.rapidapi.com/v1/joke/{joke_id}/upvote" if query['data'] == 'Like' else f"https://joke3.p.rapidapi.com/v1/joke/{joke_id}/downvote"
         payload = ""
         headers = {
             'x-rapidapi-host': "joke3.p.rapidapi.com",
