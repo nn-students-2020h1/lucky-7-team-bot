@@ -13,7 +13,6 @@ from telegram import Bot, Update, InlineKeyboardMarkup, InlineKeyboardButton, Ca
 from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater, CallbackQueryHandler
 from classes import Logs, CSVStats
 
-
 date = datetime.date.today().strftime("%m-%d-%Y")
 bot = Bot(
     token=TOKEN,
@@ -22,7 +21,7 @@ bot = Bot(
 # Enable logging
 joke_id = ""
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                     level=logging.INFO)
+                    level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +85,7 @@ def chat_help(update: Update, context: CallbackContext):
 /corona_stats - get top-5 infected countries 
 /pokemon - get info and image of random pokemon
 /joke - bot will make you laugh (probably)
+/weather - get current weather info and forecast for the next 12 hours
 """
     update.message.reply_text(text)
 
@@ -150,15 +150,15 @@ def movie(update: Update, context: CallbackContext):
     info = json.loads(info.text)
     # poster = requests.get(f'http://img.omdbapi.com/?apikey=5a5643&i={id}')
     text = f"""
-    Title: {random_movie.data['title']}
-Genre: {info["Genre"]}
-Year: {random_movie.data['year']}
-Director: {info["Director"]}
-Runtime: {info["Runtime"]}
-IMDb rating: {random_movie.data['rating']}
-Top 250 rank: {random_movie.data['top 250 rank']}
-Link: https://www.imdb.com/title/{id}/
-    """
+       Title: {random_movie.data['title']}
+    Genre: {info["Genre"]}
+    Year: {random_movie.data['year']}
+    Director: {info["Director"]}
+    Runtime: {info["Runtime"]}
+    IMDb rating: {random_movie.data['rating']}
+    Top 250 rank: {random_movie.data['top 250 rank']}
+    Link: https://www.imdb.com/title/{id}/
+        """
     update.message.reply_text(text=text, disable_web_page_preview=False)
 
 
@@ -186,20 +186,20 @@ def corona_stats(update: Update, context: CallbackContext):
         reply_markup = InlineKeyboardMarkup(keyboard)
         if CSVStats.date == datetime.date.today().strftime("%m-%d-%Y"):
             bot.send_message(chat_id=update.effective_chat['id'],
-                              text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. Хотите посмотреть данные за предыдущий день?",
-                              reply_markup=reply_markup)
+                             text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. Хотите посмотреть данные за предыдущий день?",
+                             reply_markup=reply_markup)
         else:
             bot.edit_message_text(chat_id=update.effective_message.chat_id,
-                                   message_id=update.effective_message.message_id,
-                                   text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. Хотите посмотреть данные за предыдущий день?",
-                                   reply_markup=reply_markup)
+                                  message_id=update.effective_message.message_id,
+                                  text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. Хотите посмотреть данные за предыдущий день?",
+                                  reply_markup=reply_markup)
     else:
         top_five = csvStat.getTopFiveProvinces()
         text = "Топ зараженных провинций:\n"
         for i in range(5):
             text += f'{i + 1}. {top_five[i]["province"]} - {top_five[i]["new infected"]} заражённых\n'
         bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id,
-                               text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
+                              text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
         CSVStats.date = datetime.date.today().strftime("%m-%d-%Y")
 
 
@@ -221,6 +221,68 @@ def joke(update: Update, context: CallbackContext):
                  InlineKeyboardButton("More jokes", callback_data="More jokes")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     bot.send_message(chat_id=update.effective_chat['id'], text=content, reply_markup=reply_markup)
+
+
+@add_log
+def weather(update: Update, context: CallbackContext):
+    url = "https://api.weather.yandex.ru/v1/informers/"
+    params = {
+        'lat': 56.3269,
+        'lon': 44.0059,
+        'lang': 'ru_RU',
+    }
+    header = {'X-Yandex-API-Key': '0efaf7d4-42e5-4e88-a2e8-3eacda192a88'}
+    response = requests.get(url, params=params, headers=header).json()
+
+    wind_directions = {
+        "nw": "north-western",
+        "n": "northern",
+        "ne": "north-eastern",
+        "e": "eastern",
+        "se": "south-eastern",
+        "s": "southern",
+        "sw": "south-western",
+        "w": "western",
+        "c": "calm"
+    }
+
+    current_temperature = response['fact']['temp']
+    feels_like = response['fact']['feels_like']
+    condition = response['fact']['condition']
+    wind_speed = response['fact']['wind_speed']
+    wind_direction = wind_directions[response['fact']['wind_dir']]
+
+    # forecast_date = datetime.strptime(response['forecast']['date'], '%Y-%m-%d').strftime('%d-%m-%Y')
+    forecast_date = '-'.join(response['forecast']['date'].split('-')[::-1])
+
+    part_one = response['forecast']['parts'][0]['part_name']
+    temp_min_one = response['forecast']['parts'][0]['temp_min']
+    temp_max_one = response['forecast']['parts'][0]['temp_max']
+    condition_one = response['forecast']['parts'][0]['condition']
+    wind_speed_one = response['forecast']['parts'][0]['wind_speed']
+    wind_direction_one = wind_directions[response['forecast']['parts'][0]['wind_dir']]
+
+    part_two = response['forecast']['parts'][1]['part_name']
+    temp_min_two = response['forecast']['parts'][1]['temp_min']
+    temp_max_two = response['forecast']['parts'][1]['temp_max']
+    condition_two = response['forecast']['parts'][1]['condition']
+    wind_speed_two = response['forecast']['parts'][1]['wind_speed']
+    wind_direction_two = wind_directions[response['forecast']['parts'][1]['wind_dir']]
+
+    message = f"""
+In Nizhny Novgorod it's now {condition}. The temperature is {current_temperature}°C but feels like {feels_like}°C. \
+The {wind_direction} wind is at {wind_speed} m/s.
+
+During the {part_one} of {forecast_date} the temperature from {temp_min_one}°C to {temp_max_one}°C is expected, it's going to be {condition_one}. \
+There's going to be {wind_direction_one} wind at {wind_speed_one} m/s.
+
+In the {condition_two} {part_two} of {forecast_date} you can expect the temperature from {temp_min_two}°C to {temp_max_two}°C. \
+The winds are going to be {wind_direction_two} at {wind_speed_two} m/s.
+
+Source: Yandex.Weather
+More info at {response['info']['url']}
+"""
+    bot.send_message(chat_id=update.effective_chat['id'], text=message, disable_web_page_preview=True)
 
 
 def button_corona(update, context):
@@ -257,7 +319,8 @@ def button_joke(update, context):
         reply_markup = InlineKeyboardMarkup(keyboard)
         text = "You ❤️ it!" if query['data'] == 'Like' else "You 💔️ it!"
         bot.answerCallbackQuery(callback_query_id=update.callback_query.id, text=text)
-        bot.edit_message_text(message_id=update.callback_query.message.message_id, chat_id=update.callback_query.message.chat.id, text=content, reply_markup=reply_markup)
+        bot.edit_message_text(message_id=update.callback_query.message.message_id,
+                              chat_id=update.callback_query.message.chat.id, text=content, reply_markup=reply_markup)
     elif query['data'] == 'More jokes':
         joke(update, context)
 
@@ -275,6 +338,7 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('movie', movie))
     updater.dispatcher.add_handler(CommandHandler('joke', joke))
     updater.dispatcher.add_handler(CommandHandler('pokemon', pokemon))
+    updater.dispatcher.add_handler(CommandHandler('weather', weather))
 
     updater.dispatcher.add_handler(CallbackQueryHandler(button_corona, pattern='(True|False)'))
     updater.dispatcher.add_handler(CallbackQueryHandler(button_joke, pattern='(Like|Dislike|More jokes)'))

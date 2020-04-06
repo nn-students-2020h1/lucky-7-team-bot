@@ -29,3 +29,4 @@ Team:
 - `/corona_stats` - get top-5 infected countries 
 - `/pokemon` - get info and image of random pokemon
 - `/joke` - bot will make you laugh (probably)
+- `/weather` - get current weather info and a forecast for the next 12 hours
