@@ -35,19 +35,27 @@ class CSVStats:
     date = datetime.date.today().strftime("%m-%d-%Y")
     def __init__(self, file_name):
         self.filename = file_name
-        r = requests.get(
+        self.r = requests.get(
             f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{self.date}.csv')
-        self.status_code = r.status_code
+        self.status_code = self.r.status_code
         if self.status_code == 200:
-            with open(file_name, "wb") as f:
-                f.write(r.content)
+            with open(self.filename, "wb") as f:
+                f.write(self.r.content)
+
+    def changeRequest(self):
+        self.r = requests.get(
+            f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{self.date}.csv' )
+        self.status_code = self.r.status_code
+        if self.status_code == 200:
+            with open(self.filename, "wb" ) as f:
+                f.write(self.r.content )
 
     def getTopFiveProvinces(self):
         top_five = []
         with open(self.filename, "r") as f:
             stats = csv.DictReader(f)
             for row in stats:
-                place = row["Province_State"] + " " + row["Country_Region"]
+                place = row["Province_State"] + " " + row["Country_Region"] if row["Province_State"]!= "" else row["Country_Region"]
                 new_infected = int(row["Confirmed"]) - int(row["Deaths"]) - int(row["Recovered"])
                 if len(top_five) == 0:
                     top_five.append({"province": place, "new infected": new_infected})

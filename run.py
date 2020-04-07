@@ -82,7 +82,8 @@ def chat_help(update: Update, context: CallbackContext):
 /history - show last five logs
 /fact - get the most popular fact about cats 
 /movie - get random movie from top-250 IMDb
-/corona_stats - get top-5 infected countries 
+/corona_stats - get top-5 COVID-19 infected countries 
+/corona_stats_dynamics - get dynamic of COVID-19 distribution
 /pokemon - get info and image of random pokemon
 /joke - bot will make you laugh (probably)
 /weather - get current weather info and forecast for the next 12 hours
@@ -201,6 +202,31 @@ def corona_stats(update: Update, context: CallbackContext):
         bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id,
                               text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
         CSVStats.date = datetime.date.today().strftime("%m-%d-%Y")
+
+
+@add_log
+def corona_stats_dynamics(update: Update, context: CallbackContext):
+    today_stats = CSVStats("today_stats.csv")
+    yesterday_stats = CSVStats("yesterday_stats.csv")
+    while today_stats.status_code != 200:
+        today_stats.date = (datetime.datetime.strptime(today_stats.date, "%m-%d-%Y") - datetime.timedelta( days=1 )).strftime(
+            "%m-%d-%Y")
+        today_stats.changeRequest()
+    yesterday_stats.date = (datetime.datetime.strptime(today_stats.date, "%m-%d-%Y") - datetime.timedelta( days=1 )).strftime(
+            "%m-%d-%Y")
+    yesterday_stats.changeRequest()
+    today_top_five = today_stats.getTopFiveProvinces()
+    yesterday_top_five = yesterday_stats.getTopFiveProvinces()
+    text = f"COVID-19 statistics dynamics from {yesterday_stats.date} to {today_stats.date}: \n"
+    for i in range(5):
+        old_infected = 0
+        for j in range(len(yesterday_top_five)):
+            if today_top_five[i]["province"] == yesterday_top_five[j]["province"]:
+                old_infected = yesterday_top_five[j]["new infected"]
+                break
+        text += f'{i + 1}. {today_top_five[i]["province"]} - {today_top_five[i]["new infected"]} (+{today_top_five[i]["new infected"] - old_infected}) infected\n'
+    bot.send_message(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id,
+                           text=f"{text}")
 
 
 @add_log
@@ -335,6 +361,7 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('test', test))
     updater.dispatcher.add_handler(CommandHandler('fact', fact))
     updater.dispatcher.add_handler(CommandHandler('corona_stats', corona_stats))
+    updater.dispatcher.add_handler(CommandHandler('corona_stats_dynamics', corona_stats_dynamics))
     updater.dispatcher.add_handler(CommandHandler('movie', movie))
     updater.dispatcher.add_handler(CommandHandler('joke', joke))
     updater.dispatcher.add_handler(CommandHandler('pokemon', pokemon))
