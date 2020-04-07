@@ -17,7 +17,7 @@ Team:
     `venv\Scripts\activate.bat` - on Windows  
     `pip install -r requirements.txt`  
 
-3. Execute ``python chat_bot_template.py``
+3. Execute ``python run.py``
 
 ## Supported commands
 
@@ -27,5 +27,7 @@ Team:
 - `/fact` - get the most popular fact about cats  
 - `/movie` - get random movie from top-250 IMDb  
 - `/corona_stats` - get top-5 infected countries 
+- `/corona_stats_dynamics` - get dynamic of COVID-19 distribution
 - `/pokemon` - get info and image of random pokemon
-- 
+- `/joke` - bot will make you laugh (probably)
+- `/weather` - get current weather info and a forecast for the next 12 hours
