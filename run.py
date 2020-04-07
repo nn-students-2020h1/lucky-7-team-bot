@@ -151,15 +151,15 @@ def movie(update: Update, context: CallbackContext):
     info = json.loads(info.text)
     # poster = requests.get(f'http://img.omdbapi.com/?apikey=5a5643&i={id}')
     text = f"""
-       Title: {random_movie.data['title']}
-    Genre: {info["Genre"]}
-    Year: {random_movie.data['year']}
-    Director: {info["Director"]}
-    Runtime: {info["Runtime"]}
-    IMDb rating: {random_movie.data['rating']}
-    Top 250 rank: {random_movie.data['top 250 rank']}
-    Link: https://www.imdb.com/title/{id}/
-        """
+Title: {random_movie.data['title']}
+Genre: {info["Genre"]}
+Year: {random_movie.data['year']}
+Director: {info["Director"]}
+Runtime: {info["Runtime"]}
+IMDb rating: {random_movie.data['rating']}
+Top 250 rank: {random_movie.data['top 250 rank']}
+Link: https://www.imdb.com/title/{id}/
+"""
     update.message.reply_text(text=text, disable_web_page_preview=False)
 
 
@@ -318,7 +318,7 @@ def button_corona(update, context):
         bot.send_message(chat_id=update.callback_query.message.chat['id'], text='Хорошо :)')
     else:
         global date
-        CSVStats.date = (datetime.datetime.strptime(date, "%m-%d-%Y") - datetime.timedelta(days=1)).strftime(
+        CSVStats.date = (datetime.datetime.strptime(CSVStats.date, "%m-%d-%Y") - datetime.timedelta(days=1)).strftime(
             "%m-%d-%Y")
         corona_stats(update, context)
 
