@@ -9,7 +9,7 @@ import requests
 import datetime
 from imdb import IMDb
 from setup import PROXY, TOKEN
-from telegram import Bot, Update, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from telegram import Bot, Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater, CallbackQueryHandler
 from classes import Logs, CSVStats
 
@@ -75,14 +75,14 @@ If you need help, enter /help command.
 @add_log
 def chat_help(update: Update, context: CallbackContext):
     """Send a message when the command /help is issued."""
-    text = """ 
+    text = """
     Supported commands:
-/start - start bot 
+/start - start bot
 /help - show supported commands
 /history - show last five logs
-/fact - get the most popular fact about cats 
+/fact - get the most popular fact about cats
 /movie - get random movie from top-250 IMDb
-/corona_stats - get top-5 COVID-19 infected countries 
+/corona_stats - get top-5 COVID-19 infected countries
 /corona_stats_dynamics - get dynamic of COVID-19 distribution
 /pokemon - get info and image of random pokemon
 /joke - bot will make you laugh (probably)
@@ -187,17 +187,19 @@ def corona_stats(update: Update, context: CallbackContext):
         reply_markup = InlineKeyboardMarkup(keyboard)
         if CSVStats.date == datetime.date.today().strftime("%m-%d-%Y"):
             bot.send_message(chat_id=update.effective_chat['id'],
-                             text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. Хотите посмотреть данные за предыдущий день?",
+                             text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. "
+                                  f"Хотите посмотреть данные за предыдущий день?",
                              reply_markup=reply_markup)
         else:
             bot.edit_message_text(chat_id=update.effective_message.chat_id,
                                   message_id=update.effective_message.message_id,
-                                  text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. Хотите посмотреть данные за предыдущий день?",
+                                  text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. "
+                                       f"Хотите посмотреть данные за предыдущий день?",
                                   reply_markup=reply_markup)
     else:
         top_five = csvStat.getTopFiveProvinces()
         text = "Топ зараженных провинций:\n"
-        for i in range(5):
+        for i in range(len(top_five)):
             text += f'{i + 1}. {top_five[i]["province"]} - {top_five[i]["new infected"]} заражённых\n'
         bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id,
                               text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
@@ -209,11 +211,11 @@ def corona_stats_dynamics(update: Update, context: CallbackContext):
     today_stats = CSVStats("today_stats.csv")
     yesterday_stats = CSVStats("yesterday_stats.csv")
     while today_stats.status_code != 200:
-        today_stats.date = (datetime.datetime.strptime(today_stats.date, "%m-%d-%Y") - datetime.timedelta( days=1 )).strftime(
-            "%m-%d-%Y")
+        today_stats.date = (datetime.datetime.strptime(today_stats.date, "%m-%d-%Y") -
+                            datetime.timedelta(days=1)).strftime("%m-%d-%Y")
         today_stats.changeRequest()
-    yesterday_stats.date = (datetime.datetime.strptime(today_stats.date, "%m-%d-%Y") - datetime.timedelta( days=1 )).strftime(
-            "%m-%d-%Y")
+    yesterday_stats.date = (datetime.datetime.strptime(today_stats.date, "%m-%d-%Y") -
+                            datetime.timedelta(days=1)).strftime("%m-%d-%Y")
     yesterday_stats.changeRequest()
     today_top_five = today_stats.getTopFiveProvinces()
     yesterday_top_five = yesterday_stats.getTopFiveProvinces()
@@ -224,9 +226,10 @@ def corona_stats_dynamics(update: Update, context: CallbackContext):
             if today_top_five[i]["province"] == yesterday_top_five[j]["province"]:
                 old_infected = yesterday_top_five[j]["new infected"]
                 break
-        text += f'{i + 1}. {today_top_five[i]["province"]} - {today_top_five[i]["new infected"]} (+{today_top_five[i]["new infected"] - old_infected}) infected\n'
+        text += f'{i + 1}. {today_top_five[i]["province"]} - {today_top_five[i]["new infected"]} ' \
+                f'(+{today_top_five[i]["new infected"] - old_infected}) infected\n'
     bot.send_message(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id,
-                           text=f"{text}")
+                     text=f"{text}")
 
 
 @add_log
@@ -296,14 +299,14 @@ def weather(update: Update, context: CallbackContext):
     wind_direction_two = wind_directions[response['forecast']['parts'][1]['wind_dir']]
 
     message = f"""
-In Nizhny Novgorod it's now {condition}. The temperature is {current_temperature}°C but feels like {feels_like}°C. \
+In Nizhny Novgorod it's now {condition}. The temperature is {current_temperature}°C but feels like {feels_like}°C.
 The {wind_direction} wind is at {wind_speed} m/s.
 
-During the {part_one} of {forecast_date} the temperature from {temp_min_one}°C to {temp_max_one}°C is expected, it's going to be {condition_one}. \
-There's going to be {wind_direction_one} wind at {wind_speed_one} m/s.
+During the {part_one} of {forecast_date} the temperature from {temp_min_one}°C to {temp_max_one}°C is expected,
+it's going to be {condition_one}. There's going to be {wind_direction_one} wind at {wind_speed_one} m/s.
 
-In the {condition_two} {part_two} of {forecast_date} you can expect the temperature from {temp_min_two}°C to {temp_max_two}°C. \
-The winds are going to be {wind_direction_two} at {wind_speed_two} m/s.
+In the {condition_two} {part_two} of {forecast_date} you can expect the temperature from {temp_min_two}°C to
+{temp_max_two}°C. The winds are going to be {wind_direction_two} at {wind_speed_two} m/s.
 
 Source: Yandex.Weather
 More info at {response['info']['url']}
@@ -327,7 +330,7 @@ def button_joke(update, context):
     query = update.callback_query
     if query['data'] == 'Like' or query['data'] == "Dislike":
         global joke_id
-        url = f"https://joke3.p.rapidapi.com/v1/joke/{joke_id}/upvote" if query['data'] == 'Like' else f"https://joke3.p.rapidapi.com/v1/joke/{joke_id}/downvote"
+        url = f"https://joke3.p.rapidapi.com/v1/joke/{joke_id}/upvote" if query['data'] == 'Like' else f"https://joke3.p.rapidapi.com/v1/joke/{joke_id}/downvote" # noqa
         payload = ""
         headers = {
             'x-rapidapi-host': "joke3.p.rapidapi.com",
