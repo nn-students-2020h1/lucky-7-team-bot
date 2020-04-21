@@ -28,10 +28,9 @@ jobs:
         pip install flake8
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --config=setup.cfg --show-source --statistics --exit-zero
-    - name: Test with pytest
+    - name: Test with unittest
       run: |
-        pip install pytest
-        pytest -s tests --capture=sys
+        python -m unittest tests.py
     - name: Run coverage
       run: |
         pip install coverage
