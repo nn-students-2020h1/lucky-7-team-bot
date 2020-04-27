@@ -49,12 +49,12 @@ def add_log(function):
     def wrapper(*args, **kwargs):
         message = 'button' if args[0].message is None else args[0].message.text
         new_log = {
-            "user": args[0].effective_user.first_name,
+            "user": args[0].effective_user.username,
             "function": function.__name__,
             "message": message,
-            "time": args[0].effective_message.date.strftime("%d-%b-%Y (%H:%M:%S.%f)")
+            "time": args[0].effective_message.date
         }
-        logs = Logs("logs.json")
+        logs = Logs()
         logs.addLog(new_log)
         return function(*args, **kwargs)
 
@@ -105,8 +105,9 @@ def error(update: Update, context: CallbackContext):
 
 def history(update: Update, context: CallbackContext):
     """Send a message when the command /logs is issued."""
-    logs = Logs("logs.json")
+    logs = Logs()
     logslist = logs.getLastFiveLogs()
+    print(logslist)
     for log in logslist:
         response = ""
         for key, value in log.items():
@@ -119,9 +120,9 @@ def test(update: Update, context: CallbackContext):
         "user": update.effective_user.first_name,
         "function": "anonym",
         "message": "test",
-        "time": update.message.date.strftime("%d-%b-%Y (%H:%M:%S.%f)")
+        "time": update.message.date
     }
-    logs = Logs("logs.json")
+    logs = Logs()
     loglist = []
     for _ in range(100000):
         loglist.append(new_log)
@@ -198,6 +199,7 @@ def corona_stats(update: Update, context: CallbackContext):
                                   reply_markup=reply_markup)
     else:
         top_five = csvStat.getTopFiveProvinces()
+        print(top_five)
         text = "Топ зараженных провинций:\n"
         for i in range(len(top_five)):
             text += f'{i + 1}. {top_five[i]["province"]} - {top_five[i]["new infected"]} заражённых\n'
