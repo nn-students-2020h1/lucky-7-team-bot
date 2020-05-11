@@ -13,6 +13,7 @@ file_name_dbstats = "stats.db"
 
 class Logs:
     def __init__(self) -> None:
+        self.file_name = file_name_dblogs
         conn = sqlite3.connect(file_name_dblogs)
         with conn:
             c = conn.cursor()
@@ -44,14 +45,14 @@ class Logs:
             c = conn.cursor()
             c.execute('''SELECT user, function, message, time from logs''')
             data = c.fetchall()
-            print(data)
+            # print(data)
             if len(data) > 5:
                 data = data[-1:-6:-1]
             for row in data:
                 ans.append(
                     {"user": row[0], "function": row[1], "message": row[2], "time": row[3]}
                 )
-        print(ans)
+        # print(ans)
         return ans[::-1]
 
 
@@ -59,6 +60,10 @@ class CSVStats:
     date = datetime.date.today().strftime("%m-%d-%Y")
     def __init__(self, file_name) -> None:
         self.filename = file_name
+        self.topfive = []
+        self.fulldata = []
+        # f = open( file_name_dbstats, 'w' )
+        # f.close()
         self.conn = sqlite3.connect(file_name_dbstats)
         with self.conn:
             c = self.conn.cursor()
@@ -70,12 +75,17 @@ class CSVStats:
                 '''SELECT province, new_infected FROM topfive WHERE date = ? ORDER BY new_infected DESC;''',
                 [self.date]
             )
-            self.topfive = []
+            self.fulldata = []
             ans = c.fetchall()
             if len(ans) != 0:
                 for row in ans:
-                    self.topfive.append({"province" : row[0], "new infected" : row[1]})
+                    self.fulldata.append({"province" : row[0], "new infected" : row[1]})
                     self.status_code = 200
+                keys = list(self.fulldata[0].keys())
+                with open(self.filename, 'w') as output_file:
+                    dict_writer = csv.DictWriter(output_file, fieldnames=keys)
+                    dict_writer.writeheader()
+                    dict_writer.writerows(self.fulldata)
             else:
                 self.r = requests.get(
                     f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{self.date}.csv')  # noqa
@@ -119,7 +129,7 @@ class CSVStats:
                     for elem in top_five:
                         a = [self.date]
                         a += list(elem.values())
-                        print(a)
+                        # print(a)
                         c.execute('''INSERT INTO topfive(date, province, new_infected) VALUES(?,?,?)''', a)
                     self.topfive = top_five[0:5]
         return self.topfive

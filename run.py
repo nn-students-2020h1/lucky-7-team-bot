@@ -107,7 +107,7 @@ def history(update: Update, context: CallbackContext):
     """Send a message when the command /logs is issued."""
     logs = Logs()
     logslist = logs.getLastFiveLogs()
-    print(logslist)
+    # print(logslist)
     for log in logslist:
         response = ""
         for key, value in log.items():
@@ -198,8 +198,9 @@ def corona_stats(update: Update, context: CallbackContext):
                                        f"Хотите посмотреть данные за предыдущий день?",
                                   reply_markup=reply_markup)
     else:
+        csvStat.changeRequest()
         top_five = csvStat.getTopFiveProvinces()
-        print(top_five)
+        # print(top_five)
         text = "Топ зараженных провинций:\n"
         for i in range(len(top_five)):
             text += f'{i + 1}. {top_five[i]["province"]} - {top_five[i]["new infected"]} заражённых\n'
