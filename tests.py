@@ -6,7 +6,7 @@ from classes import Logs, CSVStats
 
 class TestLogs(unittest.TestCase):
     def setUp(self):
-        self.logs = Logs("test.json")
+        self.logs = Logs()
 
     def tearDown(self):
         f = open("test.json", "w")

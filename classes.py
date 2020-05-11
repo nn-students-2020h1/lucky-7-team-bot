@@ -13,6 +13,7 @@ file_name_dbstats = "stats.db"
 
 class Logs:
     def __init__(self) -> None:
+        self.file_name = file_name_dblogs
         conn = sqlite3.connect(file_name_dblogs)
         with conn:
             c = conn.cursor()
