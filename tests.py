@@ -6,19 +6,18 @@ from classes import Logs, CSVStats
 
 class TestLogs(unittest.TestCase):
     def setUp(self):
-        self.logs = Logs()
+        self.logs = Logs('tests.db')
 
     def tearDown(self):
-        f = open("test.json", "w")
-        f.close()
+        self.logs.clean()
 
     def test_addLog(self):
         new_log = {
             "user": "Stepan", "function": "corona_stats", "message": "button", "time": "31-Mar-2020 (11:02:57.000000)"
         }
         self.logs.addLog(new_log)
-        with open(self.logs.file_name) as read_file:
-            self.assertEqual(loads(read_file.readline()), new_log)
+        last_five_logs = self.logs.getLastFiveLogs()
+        self.assertEqual(last_five_logs[0], new_log)
 
     def test_addLogs(self):
         new_logs = [
@@ -32,7 +31,7 @@ class TestLogs(unittest.TestCase):
             }
         ]
         self.logs.addLogs(new_logs)
-        self.assertEqual(self.logs.getLastFiveLogs(), new_logs)
+        self.assertEqual(self.logs.getLastFiveLogs()[0:2], new_logs)
 
     def test_getLastFiveLogs(self):
         new_log = {

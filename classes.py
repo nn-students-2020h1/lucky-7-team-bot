@@ -6,15 +6,15 @@ import sqlite3
 
 
 
-file_name_dblogs = "logs.db"
+
 file_name_csvstats = "todaystats.csv"
 file_name_dbstats = "stats.db"
 
 
 class Logs:
-    def __init__(self) -> None:
+    def __init__(self, file_name_dblogs = "logs.db") -> None:
         self.file_name = file_name_dblogs
-        conn = sqlite3.connect(file_name_dblogs)
+        conn = sqlite3.connect(self.file_name)
         with conn:
             c = conn.cursor()
             c.execute('''CREATE TABLE IF NOT EXISTS logs(
@@ -26,13 +26,13 @@ class Logs:
             );''')
 
     def addLog(self, new_log: dict) -> None:
-        conn = sqlite3.connect(file_name_dblogs)
+        conn = sqlite3.connect(self.file_name)
         with conn:
             c = conn.cursor()
             c.execute('''INSERT into logs(user, function, message, time) VALUES(?,?,?,?)''', list(new_log.values()))
 
     def addLogs(self, new_logs: list) -> None:
-        conn = sqlite3.connect(file_name_dblogs)
+        conn = sqlite3.connect(self.file_name)
         with conn:
             c = conn.cursor()
             for new_log in new_logs:
@@ -40,7 +40,7 @@ class Logs:
 
     def getLastFiveLogs(self) -> list:
         ans = []
-        conn = sqlite3.connect(file_name_dblogs)
+        conn = sqlite3.connect(self.file_name)
         with conn:
             c = conn.cursor()
             c.execute('''SELECT user, function, message, time from logs''')
@@ -55,6 +55,12 @@ class Logs:
         # print(ans)
         return ans[::-1]
 
+    def clean(self):
+        conn = sqlite3.connect(self.file_name)
+        with conn:
+            c = conn.cursor()
+            c.execute('''DELETE FROM logs''')
+
 
 class CSVStats:
     date = datetime.date.today().strftime("%m-%d-%Y")
@@ -62,8 +68,6 @@ class CSVStats:
         self.filename = file_name
         self.topfive = []
         self.fulldata = []
-        # f = open( file_name_dbstats, 'w' )
-        # f.close()
         self.conn = sqlite3.connect(file_name_dbstats)
         with self.conn:
             c = self.conn.cursor()
