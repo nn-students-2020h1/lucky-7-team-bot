@@ -183,27 +183,27 @@ def corona_stats(update: Update, context: CallbackContext):
         CSVStats.date = parseDateFromString(update.effective_message.text)
     csvStat = CSVStats("todaystats.csv")
     if csvStat.status_code != 200:
-        keyboard = [[InlineKeyboardButton("Да, покажи данные за предыдущий день", callback_data="True"),
-                     InlineKeyboardButton("Нет, спасибо", callback_data="False")]]
+        keyboard = [[InlineKeyboardButton("Yes, show me data from previous day", callback_data="True"),
+                     InlineKeyboardButton("No, thank you", callback_data="False")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         bot.send_message(chat_id=update.effective_chat['id'],
-                         text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. "
-                              f"Хотите посмотреть данные за предыдущий день?", reply_markup=reply_markup)
+                         text=f"Something went wrong. Maybe, there is no data yet from {CSVStats.date}."
+                              f"Do you want to now data from previous day?", reply_markup=reply_markup)
     else:
         csvStat.changeRequest()
         top_five = csvStat.getTopFiveProvinces()
         # print(top_five)
-        text = "Топ зараженных провинций:\n"
+        text = "TOP-5 infected regions:\n"
         for i in range(len(top_five)):
-            text += f'{i + 1}. {top_five[i]["province"]} - {top_five[i]["new infected"]} заражённых\n'
+            text += f'{i + 1}. {top_five[i]["province"]} - {top_five[i]["new infected"]} infected\n'
         if update.message is not None and update.message.from_user == update.effective_user:
             bot.send_message(chat_id=update.effective_message.chat_id,
                              message_id=update.effective_message.message_id,
-                             text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
+                             text=f"COVID-19 statistics dynamics from {CSVStats.date}\n{text}")
         else:
             bot.edit_message_text(chat_id=update.effective_message.chat_id,
                                   message_id=update.effective_message.message_id,
-                                  text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
+                                  text=f"COVID-19 statistics dynamics from {CSVStats.date}\n{text}")
         CSVStats.date = datetime.date.today().strftime("%m-%d-%Y")
 
 
