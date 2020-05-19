@@ -1,10 +1,7 @@
-import json
 import requests
 import datetime
 import csv
 import sqlite3
-
-
 
 
 file_name_csvstats = "todaystats.csv"
@@ -12,7 +9,7 @@ file_name_dbstats = "stats.db"
 
 
 class Logs:
-    def __init__(self, file_name_dblogs = "logs.db") -> None:
+    def __init__(self, file_name_dblogs="logs.db") -> None:
         self.file_name = file_name_dblogs
         conn = sqlite3.connect(self.file_name)
         with conn:
@@ -64,6 +61,7 @@ class Logs:
 
 class CSVStats:
     date = datetime.date.today().strftime("%m-%d-%Y")
+
     def __init__(self, file_name) -> None:
         self.filename = file_name
         self.topfive = []
@@ -83,7 +81,7 @@ class CSVStats:
             ans = c.fetchall()
             if len(ans) != 0:
                 for row in ans:
-                    self.fulldata.append({"province" : row[0], "new infected" : row[1]})
+                    self.fulldata.append({"province": row[0], "new infected": row[1]})
                     self.status_code = 200
                 keys = list(self.fulldata[0].keys())
                 with open(self.filename, 'w') as output_file:
@@ -96,7 +94,6 @@ class CSVStats:
                 self.status_code = self.r.status_code
                 with open(self.filename, "wb") as f:
                     f.write(self.r.content)
-
 
     def changeRequest(self) -> None:
         self.r = requests.get(
