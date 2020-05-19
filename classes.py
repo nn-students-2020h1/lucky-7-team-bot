@@ -92,9 +92,10 @@ class CSVStats:
             else:
                 self.r = requests.get(
                     f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{self.date}.csv')  # noqa
-                self.status_code = self.r.status_code
-                with open(self.filename, "wb") as f:
-                    f.write(self.r.content)
+                self.status_code = r.status_code
+                if self.status_code == 200:
+                    with open(self.filename, "wb") as f:
+                        f.write(r.content)
                     
     def get_top_five_from_db(self) -> list:
         with self.conn:
