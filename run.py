@@ -8,8 +8,8 @@ from timeit import default_timer as timer
 import requests
 import datetime
 from imdb import IMDb
-from setup import PROXY, TOKEN
-from telegram import Bot, Update, InlineKeyboardMarkup, InlineKeyboardButton
+from setup import PROXY, TOKEN, YANDEX_API, RAPID_API
+from telegram import Bot, Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater, CallbackQueryHandler
 from classes import Logs, CSVStats, parseDateFromString
 
@@ -38,11 +38,6 @@ def average_time(function):
         return res
 
     return inner
-
-
-# TODO: количество логов в истории
-# TODO: вывод логов только одного юзера, а не всех
-# TODO: вывод всех логов по ключу
 
 
 def add_log(function):
@@ -80,13 +75,16 @@ def chat_help(update: Update, context: CallbackContext):
 /start - start bot
 /help - show supported commands
 /history - show last five logs
-/fact - get the most popular fact about cats
+/fact_cat - get the most popular fact about cats
 /movie - get random movie from top-250 IMDb
 /corona_stats - get top-5 COVID-19 infected countries
 /corona_stats_dynamics - get dynamic of COVID-19 distribution
 /pokemon - get info and image of random pokemon
 /joke - bot will make you laugh (probably)
 /weather - get current weather info and forecast for the next 12 hours
+/fact_year <year> - get interesting fact about particular year (default value - 2020)
+/fact_number <number> - get integersting fact about number (default value - random < 1000)
+/coin - to flip a coin
 """
     update.message.reply_text(text)
 
@@ -240,7 +238,7 @@ def joke(update: Update, context: CallbackContext):
     url = "https://joke3.p.rapidapi.com/v1/joke"
     headers = {
         'x-rapidapi-host': "joke3.p.rapidapi.com",
-        'x-rapidapi-key': "837031bcd7msh57190d81a3d0374p19228ejsn5404ac1dd13a"
+        'x-rapidapi-key': RAPID_API
     }
     global joke_id
     response = json.loads(requests.request("GET", url, headers=headers).text)
@@ -254,6 +252,53 @@ def joke(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(keyboard)
     bot.send_message(chat_id=update.effective_chat['id'], text=content, reply_markup=reply_markup)
 
+@add_log
+def fact_year(update: Update, context: CallbackContext):
+    data = update.message['text'].split()
+    year = 0
+    try:
+        year = data[1]
+    except:
+        year = 2020
+    url = f"https://numbersapi.p.rapidapi.com/{year}/year"
+    querystring = {"fragment": "true", "json": "true"}
+    headers = {
+        'x-rapidapi-host': "numbersapi.p.rapidapi.com",
+        'x-rapidapi-key': RAPID_API
+    }
+    response = requests.request("GET", url, headers=headers, params=querystring)
+    response = json.loads(response.text)
+    response = f"Year {year}: " + response["text"].capitalize()
+    bot.send_message(chat_id=update.effective_chat['id'], text=response)
+
+@add_log
+def fact_number(update: Update, context: CallbackContext):
+    data = update.message['text'].split()
+    number = 0
+    try:
+        number = data[1]
+    except:
+        number = random.randint(0, 1000)
+    url = f"https://numbersapi.p.rapidapi.com/{number}/math"
+    querystring = {"fragment": "true", "json": "true"}
+    headers = {
+        'x-rapidapi-host': "numbersapi.p.rapidapi.com",
+        'x-rapidapi-key': RAPID_API
+    }
+    response = requests.request("GET", url, headers=headers, params=querystring)
+    response = json.loads(response.text)
+    response = f"Fact for number {number}: " + response["text"].capitalize()
+    bot.send_message(chat_id=update.effective_chat['id'], text=response)
+
+@add_log
+def coin(update: Update, context: CallbackContext):
+    number = random.randint(0, 1000)
+    response = ""
+    if number % 2 == 1:
+        response = "Heads"
+    else:
+        response = "Tails"
+    bot.send_message(chat_id=update.effective_chat['id'], text=response)
 
 @add_log
 def weather(update: Update, context: CallbackContext):
@@ -263,7 +308,7 @@ def weather(update: Update, context: CallbackContext):
         'lon': 44.0059,
         'lang': 'ru_RU',
     }
-    header = {'X-Yandex-API-Key': '0efaf7d4-42e5-4e88-a2e8-3eacda192a88'}
+    header = {'X-Yandex-API-Key': YANDEX_API}
     response = requests.get(url, params=params, headers=header).json()
 
     wind_directions = {
@@ -365,13 +410,16 @@ def main():
     updater.dispatcher.add_handler(CommandHandler('help', chat_help))
     updater.dispatcher.add_handler(CommandHandler('history', history))
     updater.dispatcher.add_handler(CommandHandler('test', test))
-    updater.dispatcher.add_handler(CommandHandler('fact', fact))
+    updater.dispatcher.add_handler(CommandHandler('fact_cat', fact))
     updater.dispatcher.add_handler(CommandHandler('corona_stats', corona_stats))
     updater.dispatcher.add_handler(CommandHandler('corona_stats_dynamics', corona_stats_dynamics))
     updater.dispatcher.add_handler(CommandHandler('movie', movie))
     updater.dispatcher.add_handler(CommandHandler('joke', joke))
     updater.dispatcher.add_handler(CommandHandler('pokemon', pokemon))
     updater.dispatcher.add_handler(CommandHandler('weather', weather))
+    updater.dispatcher.add_handler(CommandHandler('fact_year', fact_year))
+    updater.dispatcher.add_handler(CommandHandler('fact_number', fact_number))
+    updater.dispatcher.add_handler(CommandHandler('coin', coin))
 
     updater.dispatcher.add_handler(CallbackQueryHandler(button_corona, pattern='(True|False)'))
     updater.dispatcher.add_handler(CallbackQueryHandler(button_joke, pattern='(Like|Dislike|More jokes)'))
