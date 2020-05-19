@@ -11,7 +11,7 @@ from imdb import IMDb
 from setup import PROXY, TOKEN
 from telegram import Bot, Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater, CallbackQueryHandler
-from classes import Logs, CSVStats
+from classes import Logs, CSVStats, parseDateFromString
 
 date = datetime.date.today().strftime("%m-%d-%Y")
 bot = Bot(
@@ -107,7 +107,7 @@ def history(update: Update, context: CallbackContext):
     """Send a message when the command /logs is issued."""
     logs = Logs()
     logslist = logs.getLastFiveLogs()
-    print(logslist)
+    # print(logslist)
     for log in logslist:
         response = ""
         for key, value in log.items():
@@ -181,30 +181,30 @@ Type: {pokemon_info['types'][0]['type']['name']}
 
 @add_log
 def corona_stats(update: Update, context: CallbackContext):
+    if update.message is not None and update.message.from_user == update.effective_user:
+        CSVStats.date = parseDateFromString(update.effective_message.text)
     csvStat = CSVStats("todaystats.csv")
     if csvStat.status_code != 200:
         keyboard = [[InlineKeyboardButton("Да, покажи данные за предыдущий день", callback_data="True"),
                      InlineKeyboardButton("Нет, спасибо", callback_data="False")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        if CSVStats.date == datetime.date.today().strftime("%m-%d-%Y"):
-            bot.send_message(chat_id=update.effective_chat['id'],
+        bot.send_message(chat_id=update.effective_chat['id'],
                              text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. "
                                   f"Хотите посмотреть данные за предыдущий день?",
                              reply_markup=reply_markup)
-        else:
-            bot.edit_message_text(chat_id=update.effective_message.chat_id,
-                                  message_id=update.effective_message.message_id,
-                                  text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. "
-                                       f"Хотите посмотреть данные за предыдущий день?",
-                                  reply_markup=reply_markup)
     else:
+        csvStat.changeRequest()
         top_five = csvStat.getTopFiveProvinces()
-        print(top_five)
         text = "Топ зараженных провинций:\n"
         for i in range(len(top_five)):
             text += f'{i + 1}. {top_five[i]["province"]} - {top_five[i]["new infected"]} заражённых\n'
-        bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id,
-                              text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
+        if update.message is not None and update.message.from_user == update.effective_user:
+            bot.send_message(chat_id=update.effective_message.chat_id,
+                                  message_id=update.effective_message.message_id,
+                                  text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
+        else:
+            bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id,
+                                text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
         CSVStats.date = datetime.date.today().strftime("%m-%d-%Y")
 
 
@@ -394,3 +394,4 @@ if __name__ == '__main__':
     logger.info('Start Bot')
     LOGS = []
     main()
+
