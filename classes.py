@@ -2,6 +2,8 @@ import requests
 import datetime
 import csv
 import sqlite3
+import re
+
 
 
 file_name_csvstats = "todaystats.csv"
@@ -81,22 +83,17 @@ class CSVStats:
             ans = c.fetchall()
             if len(ans) != 0:
                 for row in ans:
-                    self.fulldata.append({"province": row[0], "new infected": row[1]})
                     self.topfive.append({"province": row[0], "new infected": row[1]})
                     self.status_code = 200
-                keys = list(self.fulldata[0].keys())
-                with open(self.filename, 'w') as output_file:
-                    dict_writer = csv.DictWriter(output_file, fieldnames=keys)
-                    dict_writer.writeheader()
-                    dict_writer.writerows(self.fulldata)
+                self.topfive = self.topfive[0:5]
             else:
-                self.r = requests.get(
+                r = requests.get(
                     f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{self.date}.csv')  # noqa
                 self.status_code = r.status_code
                 if self.status_code == 200:
                     with open(self.filename, "wb") as f:
                         f.write(r.content)
-                    
+
     def get_top_five_from_db(self) -> list:
         with self.conn:
             c = self.conn.cursor()
@@ -113,12 +110,15 @@ class CSVStats:
             return self.topfive
 
     def changeRequest(self) -> None:
-        self.r = requests.get(
+        self.topfive = self.get_top_five_from_db()
+        if self.topfive:
+            return
+        r = requests.get(
             f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{self.date}.csv')# noqa
-        self.status_code = self.r.status_code
+        self.status_code = r.status_code
         if self.status_code == 200:
             with open(self.filename, "wb") as f:
-                f.write(self.r.content)
+                f.write(r.content)
 
     def getTopFiveProvinces(self) -> list:
         if len(self.topfive) == 0:
@@ -138,16 +138,24 @@ class CSVStats:
                                 break
                 if len(top_five) < 5:
                     self.topfive = top_five
+                else:
+                    self.topfive = top_five[0:5]
                 with self.conn:
                     c = self.conn.cursor()
-                    c.execute('''CREATE TABLE IF NOT EXISTS topfive(
-                        date TEXT,
-                        province TEXT,
-                        new_infected INTEGER);''')
-                    for elem in top_five:
+                    for elem in self.topfive:
                         a = [self.date]
                         a += list(elem.values())
-                        # print(a)
                         c.execute('''INSERT INTO topfive(date, province, new_infected) VALUES(?,?,?)''', a)
-                    self.topfive = top_five[0:5]
         return self.topfive
+
+
+def parseDateFromString(string: str) -> str:
+    pattern = '[0-3][0-9]\D+[0-1][0-9]\D+[0-2][0-9][0-9][0-9]+'# noqa
+    match = re.search(pattern, string)
+    if match:
+        res = re.findall(pattern, string)
+        string = re.sub("\D", ' ', res[0])# noqa
+        res = string.split()
+        return res[1] + '-' + res[0] + '-' + res[2]
+    else:
+        return datetime.date.today().strftime("%m-%d-%Y")
