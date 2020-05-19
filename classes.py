@@ -5,6 +5,7 @@ import sqlite3
 import re
 
 
+
 file_name_csvstats = "todaystats.csv"
 file_name_dbstats = "stats.db"
 
@@ -65,6 +66,8 @@ class CSVStats:
 
     def __init__(self, file_name) -> None:
         self.filename = file_name
+        self.topfive = []
+        self.fulldata = []
         self.conn = sqlite3.connect(file_name_dbstats)
         with self.conn:
             c = self.conn.cursor()
@@ -76,7 +79,7 @@ class CSVStats:
                 '''SELECT province, new_infected FROM topfive WHERE date = ? ORDER BY new_infected DESC;''',
                 [self.date]
             )
-            self.topfive = []
+            self.fulldata = []
             ans = c.fetchall()
             if len(ans) != 0:
                 for row in ans:
@@ -143,7 +146,6 @@ class CSVStats:
                         a = [self.date]
                         a += list(elem.values())
                         c.execute('''INSERT INTO topfive(date, province, new_infected) VALUES(?,?,?)''', a)
-
         return self.topfive
 
 

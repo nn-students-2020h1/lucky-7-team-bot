@@ -194,7 +194,7 @@ def corona_stats(update: Update, context: CallbackContext):
     else:
         csvStat.changeRequest()
         top_five = csvStat.getTopFiveProvinces()
-        print(top_five)
+        # print(top_five)
         text = "Топ зараженных провинций:\n"
         for i in range(len(top_five)):
             text += f'{i + 1}. {top_five[i]["province"]} - {top_five[i]["new infected"]} заражённых\n'
