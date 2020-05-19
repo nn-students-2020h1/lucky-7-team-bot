@@ -1,6 +1,5 @@
 import unittest
 from unittest import mock
-from json import loads
 from classes import Logs, CSVStats
 
 
