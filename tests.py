@@ -1,6 +1,7 @@
 import unittest
 from unittest import mock
-from classes import Logs, CSVStats
+from datetime import date
+from classes import Logs, CSVStats, parseDateFromString
 
 
 class TestLogs(unittest.TestCase):
@@ -66,6 +67,31 @@ class TestCSVStats(unittest.TestCase):
     @mock.patch.object(CSVStats, 'getTopFiveProvinces', return_value=123)
     def test_mock_getTopFiveProvinces(self, mock_getTopFiveProvinces):
         self.assertEqual(self.csvstats.getTopFiveProvinces(), 123)
+
+    def testParseDateFromString1(self):
+        string = "11.04.2020"
+        res = "04-11-2020"
+        self.assertEqual(res, parseDateFromString(string))
+
+    def testParseDateFromString2(self):
+        string = "11..04.///2020"
+        res = "04-11-2020"
+        self.assertEqual(res, parseDateFromString(string))
+
+    def testParseDateFromString3(self):
+        string = "11..04"
+        res = "04-11-2020"
+        self.assertEqual(res, parseDateFromString(string))
+
+    def testParseDateFromString4(self):
+        string = "/corona_stats Хочу получить данные за 11..04.///2020"
+        res = "04-11-2020"
+        self.assertEqual(res, parseDateFromString(string))
+
+    def testParseDateFromString5(self):
+        string = "Данные за 41..04"
+        res = date.today().strftime("%m-%d-%Y")
+        self.assertEqual(res, parseDateFromString(string))
 
 
 if __name__ == '__main__':

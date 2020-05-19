@@ -5,7 +5,6 @@ import sqlite3
 import re
 
 
-
 file_name_csvstats = "todaystats.csv"
 file_name_dbstats = "stats.db"
 
@@ -150,12 +149,19 @@ class CSVStats:
 
 
 def parseDateFromString(string: str) -> str:
-    pattern = '[0-3][0-9]\D+[0-1][0-9]\D+[0-2][0-9][0-9][0-9]+'# noqa
-    match = re.search(pattern, string)
-    if match:
-        res = re.findall(pattern, string)
+    pattern1 = '[0-3][0-9]\D+[0-1][0-9]\D+[0-2][0-9][0-9][0-9]+'# noqa
+    pattern2 = '[0-3][0-9]\D+[0-1][0-9]' # noqa
+    match1 = re.search(pattern1, string)
+    match2 = re.search(pattern2, string)
+    if match1:
+        res = re.findall(pattern1, string)
         string = re.sub("\D", ' ', res[0])# noqa
         res = string.split()
         return res[1] + '-' + res[0] + '-' + res[2]
+    elif match2:
+        res = re.findall(pattern2, string)
+        string = re.sub("\D", ' ', res[0])# noqa
+        res = string.split()
+        return res[1] + '-' + res[0] + '-' + str(datetime.date.today().year)
     else:
         return datetime.date.today().strftime("%m-%d-%Y")
