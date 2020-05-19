@@ -189,22 +189,23 @@ def corona_stats(update: Update, context: CallbackContext):
                      InlineKeyboardButton("Нет, спасибо", callback_data="False")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         bot.send_message(chat_id=update.effective_chat['id'],
-                             text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. "
-                                  f"Хотите посмотреть данные за предыдущий день?",
-                             reply_markup=reply_markup)
+                         text=f"Что-то пошло не так. Возможно, данные за {CSVStats.date} еще не появились. "
+                              f"Хотите посмотреть данные за предыдущий день?", reply_markup=reply_markup)
     else:
         csvStat.changeRequest()
         top_five = csvStat.getTopFiveProvinces()
+        print(top_five)
         text = "Топ зараженных провинций:\n"
         for i in range(len(top_five)):
             text += f'{i + 1}. {top_five[i]["province"]} - {top_five[i]["new infected"]} заражённых\n'
         if update.message is not None and update.message.from_user == update.effective_user:
             bot.send_message(chat_id=update.effective_message.chat_id,
+                             message_id=update.effective_message.message_id,
+                             text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
+        else:
+            bot.edit_message_text(chat_id=update.effective_message.chat_id,
                                   message_id=update.effective_message.message_id,
                                   text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
-        else:
-            bot.edit_message_text(chat_id=update.effective_message.chat_id, message_id=update.effective_message.message_id,
-                                text=f"Статистика заражённых COVID-19 за {CSVStats.date}\n{text}")
         CSVStats.date = datetime.date.today().strftime("%m-%d-%Y")
 
 
@@ -394,4 +395,3 @@ if __name__ == '__main__':
     logger.info('Start Bot')
     LOGS = []
     main()
-

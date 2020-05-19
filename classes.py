@@ -5,16 +5,14 @@ import sqlite3
 import re
 
 
-
-file_name_dblogs = "logs.db"
 file_name_csvstats = "todaystats.csv"
 file_name_dbstats = "stats.db"
-file_name = "stats.csv"
 
 
 class Logs:
-    def __init__(self) -> None:
-        conn = sqlite3.connect(file_name_dblogs)
+    def __init__(self, file_name_dblogs="logs.db") -> None:
+        self.file_name = file_name_dblogs
+        conn = sqlite3.connect(self.file_name)
         with conn:
             c = conn.cursor()
             c.execute('''CREATE TABLE IF NOT EXISTS logs(
@@ -26,13 +24,13 @@ class Logs:
             );''')
 
     def addLog(self, new_log: dict) -> None:
-        conn = sqlite3.connect(file_name_dblogs)
+        conn = sqlite3.connect(self.file_name)
         with conn:
             c = conn.cursor()
             c.execute('''INSERT into logs(user, function, message, time) VALUES(?,?,?,?)''', list(new_log.values()))
 
     def addLogs(self, new_logs: list) -> None:
-        conn = sqlite3.connect(file_name_dblogs)
+        conn = sqlite3.connect(self.file_name)
         with conn:
             c = conn.cursor()
             for new_log in new_logs:
@@ -40,26 +38,31 @@ class Logs:
 
     def getLastFiveLogs(self) -> list:
         ans = []
-        conn = sqlite3.connect(file_name_dblogs)
+        conn = sqlite3.connect(self.file_name)
         with conn:
             c = conn.cursor()
             c.execute('''SELECT user, function, message, time from logs''')
             data = c.fetchall()
-            print(data)
+            # print(data)
             if len(data) > 5:
                 data = data[-1:-6:-1]
             for row in data:
                 ans.append(
                     {"user": row[0], "function": row[1], "message": row[2], "time": row[3]}
                 )
-        print(ans)
+        # print(ans)
         return ans[::-1]
 
-
+    def clean(self):
+        conn = sqlite3.connect(self.file_name)
+        with conn:
+            c = conn.cursor()
+            c.execute('''DELETE FROM logs''')
 
 
 class CSVStats:
     date = datetime.date.today().strftime("%m-%d-%Y")
+
     def __init__(self, file_name) -> None:
         self.filename = file_name
         self.conn = sqlite3.connect(file_name_dbstats)
@@ -77,15 +80,13 @@ class CSVStats:
             ans = c.fetchall()
             if len(ans) != 0:
                 for row in ans:
-                    self.topfive.append({"province" : row[0], "new infected" : row[1]})
+                    self.topfive.append({"province": row[0], "new infected": row[1]})
                     self.status_code = 200
                 self.topfive = self.topfive[0:5]
             else:
-                print(self.date)
                 r = requests.get(
                     f'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{self.date}.csv')  # noqa
                 self.status_code = r.status_code
-                print(self.status_code)
                 if self.status_code == 200:
                     with open(self.filename, "wb") as f:
                         f.write(r.content)
@@ -104,7 +105,6 @@ class CSVStats:
                     self.topfive.append({"province": row[0], "new infected": row[1]})
                     self.status_code = 200
             return self.topfive
-
 
     def changeRequest(self) -> None:
         self.topfive = self.get_top_five_from_db()
@@ -135,7 +135,8 @@ class CSVStats:
                                 break
                 if len(top_five) < 5:
                     self.topfive = top_five
-                self.topfive = top_five[0:5]
+                else:
+                    self.topfive = top_five[0:5]
                 with self.conn:
                     c = self.conn.cursor()
                     for elem in self.topfive:
@@ -146,16 +147,13 @@ class CSVStats:
         return self.topfive
 
 
-
-
 def parseDateFromString(string: str) -> str:
-    pattern = '[0-3][0-9]\D+[0-1][0-9]\D+[0-2][0-9][0-9][0-9]+'
+    pattern = '[0-3][0-9]\D+[0-1][0-9]\D+[0-2][0-9][0-9][0-9]+'# noqa
     match = re.search(pattern, string)
     if match:
         res = re.findall(pattern, string)
-        string = re.sub('\D', ' ', res[0])
+        string = re.sub("\D", ' ', res[0])# noqa
         res = string.split()
         return res[1] + '-' + res[0] + '-' + res[2]
     else:
         return datetime.date.today().strftime("%m-%d-%Y")
-
