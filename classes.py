@@ -29,6 +29,19 @@ class Logs:
             c = conn.cursor()
             c.execute('''INSERT into logs(user, function, message, time) VALUES(?,?,?,?)''', list(new_log.values()))
 
+    def getLastNLogsForUser(self, username: str,n: int) -> list:
+        conn = conn = sqlite3.connect(self.file_name)
+        with conn:
+            c = conn.cursor()
+            c.execute('''SELECT function, message, time FROM logs WHERE user= ? ORDER BY time DESC''', [username])
+            data = c.fetchall()
+            ans = []
+            for row in data:
+                ans.append({"function": row[0], "message": row[1], "time": row[2]})
+            if len(ans) < n:
+                return ans
+            return ans[0:n]
+
     def addLogs(self, new_logs: list) -> None:
         conn = sqlite3.connect(self.file_name)
         with conn:
@@ -93,7 +106,7 @@ class CSVStats:
                     with open(self.filename, "wb") as f:
                         f.write(r.content)
 
-    def get_top_five_from_db(self) -> list:
+    def getTopFiveFromDB(self) -> list:
         with self.conn:
             c = self.conn.cursor()
             c.execute(
@@ -109,7 +122,7 @@ class CSVStats:
             return self.topfive
 
     def changeRequest(self) -> None:
-        self.topfive = self.get_top_five_from_db()
+        self.topfive = self.getTopFiveFromDB()
         if self.topfive:
             return
         r = requests.get(
@@ -149,19 +162,47 @@ class CSVStats:
 
 
 def parseDateFromString(string: str) -> str:
-    pattern1 = '[0-3][0-9]\D+[0-1][0-9]\D+[0-2][0-9][0-9][0-9]+'# noqa
-    pattern2 = '[0-3][0-9]\D+[0-1][0-9]' # noqa
-    match1 = re.search(pattern1, string)
-    match2 = re.search(pattern2, string)
-    if match1:
+    pattern1 = '\D?[0-3][0-9]\D+[0-1]?[0-9]\D+[2][0-9][0-9][0-9]\D+'# noqa
+    patterndate = '\D?[0-3][0-9]\D+[0-1]?[0-9]' # noqa
+    patternMonth = []
+    patternMonth.append('\D?[0-3][0-9][ ]+[Jj][Aa][Nn][Uu][Aa][Rr][Yy]\W?')
+    patternMonth.append('\D?[0-3][0-9][ ]+[Ff][Ee][Bb][Rr][Uu][Aa][Rr][Yy]\W?')
+    patternMonth.append('\D?[0-3][0-9][ ]+[Mm][Aa][Rr][Cc][Hh]\W?')
+    patternMonth.append('\D?[0-3][0-9][ ]+[Aa][Pp][Rr][Ii][Ll]\W?')
+    patternMonth.append('\D?[0-3][0-9][ ]+[Mm][Aa][Yy]\W?')
+    patternMonth.append('\D?[0-3][0-9][ ]+[Jj][Uu][Nn][Ee]\W?')
+    patternMonth.append('\D?[0-3][0-9][ ]+[Jj][Uu][Ll][Yy]\W?')
+    patternMonth.append('\D?[0-3][0-9][ ]+[Aa][Uu][Gg][Uu][Ss][Tt]\W?')
+    patternMonth.append('\D?[0-3][0-9][ ]+[Ss][Ee][Pp][Tt][Ee][Mm][Bb][Ee][Rr]\W?')
+    patternMonth.append('\D?[0-3][0-9][ ]+[Oo][Cc][Tt][Oo][Bb][Ee][Rr]\W?')
+    patternMonth.append('\D?[0-3][0-9][ ]+[Nn][Oo][Vv][Ee][Mm][Bb][Ee][Rr]\W?')
+    patternMonth.append('\D?[0-3][0-9][ ]+[Dd][Ee][Cc][Ee][Mm][Bb][Ee][Rr]\W?')
+    if re.search(pattern1, string):
         res = re.findall(pattern1, string)
         string = re.sub("\D", ' ', res[0])# noqa
         res = string.split()
         return res[1] + '-' + res[0] + '-' + res[2]
-    elif match2:
-        res = re.findall(pattern2, string)
+    elif re.search(patterndate, string):
+        res = re.findall(patterndate, string)
         string = re.sub("\D", ' ', res[0])# noqa
         res = string.split()
-        return res[1] + '-' + res[0] + '-' + str(datetime.date.today().year)
+        ans = res[1] + '-' + res[0] + '-' + str(datetime.date.today().year)
+        try:
+             valid_date = datetime.datetime.strptime(ans, '%m-%d-%Y')
+        except ValueError:
+            return ""
+        return ans
     else:
-        return datetime.date.today().strftime("%m-%d-%Y")
+        for i in range(12):
+            if re.search(patternMonth[i], string):
+                res = re.findall(patternMonth[i], string)
+                words = res[0].split()
+                words[0] = re.sub("\D", ' ', words[0])  # noqa
+                words = words[0].split()
+                ans = str(i + 1) + '-' + words[0] + '-' + str(datetime.date.today().year)
+                try:
+                    valid_date = datetime.datetime.strptime(ans, '%m-%d-%Y')
+                except ValueError:
+                    return ""
+                return ans
+    return ""

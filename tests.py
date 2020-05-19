@@ -90,7 +90,11 @@ class TestCSVStats(unittest.TestCase):
 
     def testParseDateFromString5(self):
         string = "Данные за 41..04"
-        res = date.today().strftime("%m-%d-%Y")
+        self.assertEqual("", parseDateFromString(string))
+
+    def testParseDateFromString6(self):
+        string = "Данные за 12 April"
+        res = "04-12-2020"
         self.assertEqual(res, parseDateFromString(string))
 
 
