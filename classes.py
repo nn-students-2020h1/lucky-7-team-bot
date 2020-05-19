@@ -82,6 +82,7 @@ class CSVStats:
             if len(ans) != 0:
                 for row in ans:
                     self.fulldata.append({"province": row[0], "new infected": row[1]})
+                    self.topfive.append({"province": row[0], "new infected": row[1]})
                     self.status_code = 200
                 keys = list(self.fulldata[0].keys())
                 with open(self.filename, 'w') as output_file:
@@ -94,6 +95,21 @@ class CSVStats:
                 self.status_code = self.r.status_code
                 with open(self.filename, "wb") as f:
                     f.write(self.r.content)
+                    
+    def get_top_five_from_db(self) -> list:
+        with self.conn:
+            c = self.conn.cursor()
+            c.execute(
+                '''SELECT province, new_infected FROM topfive WHERE date = ? ORDER BY new_infected DESC;''',
+                [self.date]
+            )
+            self.topfive = []
+            ans = c.fetchall()
+            if len(ans) != 0:
+                for row in ans:
+                    self.topfive.append({"province": row[0], "new infected": row[1]})
+                    self.status_code = 200
+            return self.topfive
 
     def changeRequest(self) -> None:
         self.r = requests.get(
