@@ -181,7 +181,8 @@ def parseDateFromString(string: str) -> str:
         res = re.findall(pattern1, string)
         string = re.sub("\D", ' ', res[0])# noqa
         res = string.split()
-        return res[1] + '-' + res[0] + '-' + res[2]
+        ans = res[1] + '-' + res[0] + '-' + res[2]
+        return datetime.datetime.strptime(ans, '%m-%d-%Y').strftime('%m-%d-%Y')
     elif re.search(patterndate, string):
         res = re.findall(patterndate, string)
         string = re.sub("\D", ' ', res[0])# noqa
@@ -191,7 +192,7 @@ def parseDateFromString(string: str) -> str:
              valid_date = datetime.datetime.strptime(ans, '%m-%d-%Y')
         except ValueError:
             return ""
-        return ans
+        return datetime.datetime.strptime(ans, '%m-%d-%Y').strftime('%m-%d-%Y')
     else:
         for i in range(12):
             if re.search(patternMonth[i], string):
@@ -204,5 +205,5 @@ def parseDateFromString(string: str) -> str:
                     valid_date = datetime.datetime.strptime(ans, '%m-%d-%Y')
                 except ValueError:
                     return ""
-                return ans
+                return datetime.datetime.strptime(ans, '%m-%d-%Y').strftime('%m-%d-%Y')
     return ""
